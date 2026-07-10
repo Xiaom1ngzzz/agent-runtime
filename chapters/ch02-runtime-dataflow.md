@@ -133,6 +133,7 @@ pub trait Executor {
 3. **Compile 的输入 `Context` 已经是"确定要发出去的消息"**,不做进一步的选择/过滤。这是 ContextEngine 的责任(见 §2.5)。
 4. **Chat 的输入 `Messages` 必须已经通过 Compile 校验过**——LLM Provider 不做二次验证。
 5. **Emit 的输出 `[]Event` 必须归属到当前 Turn**——所有事件的 `TurnID` 与传入的 `turn.ID` 一致。协调器会检查这一点。
+6. **Emit 的概念签名与 `Executor.Run` 的实际签名刻意不同**。表里写 `LLMResponse + ToolResult → []Event`,但 `Run` 的参数只有 `Turn`——`LLMResponse` 不走参数传递,Executor 从事件流里读该 Turn 最近的 `LLMReplied`,从中拿到要执行的 tool calls。这让"LLM 说了什么"只有一个来源(事件流),Executor 崩溃重启后也能从事件流续跑,不依赖内存里的响应对象。
 
 ---
 
@@ -142,7 +143,7 @@ pub trait Executor {
 
 **答案是显式的 `Runtime` 类型**:持有 6 个接口,`Step()` 跑一个 Turn。
 
-**Go:** `runtime-go/runtime/runtime.go`
+**Go:** `runtime-go/runtime/runtime.go`(为压缩篇幅,以下节选用 `_` 略去了错误处理;完整实现逐一检查并向上返回错误)
 
 ```go
 type Runtime struct {
@@ -289,9 +290,9 @@ flowchart TB
 
 1. **Span 边界 = 契约边界**。每段转换的输入输出都是可枚举的类型(§2.3),Span 的 `start/end` 与"契约进入/退出"一一对应,不用猜。
 2. **能直接回答"慢在哪"**——Chat span 的耗时是模型往返,Emit span 的耗时是工具执行,Fold+Project 的耗时是折叠成本。§2.1 那句"HTTP 200 一条日志"的困境消失。
-3. **Attribute 天然对齐**。Chat span 挂 `tokens_in / tokens_out / cost`;Emit span 每个工具挂 `tool_name / duration / status`。ch10 Observability 会把这套 Attribute 定成规范,并映射到 OTel Semantic Conventions。
+3. **Attribute 天然对齐**。Chat span 挂 `tokens_in / tokens_out / cost`;Emit span 每个工具挂 `tool_name / duration / status`。ch10(Evaluation & Optimization)会把这套 Attribute 定成规范,并映射到 OTel Semantic Conventions——评测与观测共用同一套指标。
 
-本章不写 OTel 集成代码——ch10 会专章讲。这里的规则是:**新加任何观测点前,先问"它是哪根箭头上"**。找不到对应箭头,说明观测点选错了,或者你在偷偷加箭头(违反 §2.5)。
+本章不写 OTel 集成代码——集成随 ch10 的评测框架一起落地。这里的规则是:**新加任何观测点前,先问"它是哪根箭头上"**。找不到对应箭头,说明观测点选错了,或者你在偷偷加箭头(违反 §2.5)。
 
 ---
 
@@ -406,4 +407,4 @@ cargo test ch02
     - Go: [`runtime-go/examples/ch02/main.go`](../runtime-go/examples/ch02/main.go)
     - Rust: [`runtime-rs/examples/ch02/main.rs`](../runtime-rs/examples/ch02/main.rs)
 - 图源: [`diagrams/ch02-dataflow.mmd`](../diagrams/ch02-dataflow.mmd)、[`diagrams/ch02-tracing.mmd`](../diagrams/ch02-tracing.mmd)
-- 相关章节:`ch01-runtime-domain.md`、`ch03-state-event.md`、`ch04-context-engine.md`、`ch08-executor.md`、`ch10-observability.md`
+- 相关章节:`ch01-runtime-domain.md`、`ch03-state-event.md`、`ch04-context-engine.md`、`ch08-executor.md`、`ch10-eval.md`

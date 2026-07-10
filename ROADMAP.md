@@ -16,7 +16,7 @@
 - [x] `chapters/ch04-context-engine.md` —— Context Engine（文字，代码 Round 2 落地）
 - [x] `chapters/ch05-memory.md` —— Memory Architecture（文字，代码 Round 2 落地）
 - [x] `chapters/ch06-prompt-compiler.md` —— Prompt Compiler（文字，代码 Round 2 落地）
-- [ ] `runtime-go/context/` & `runtime-rs/src/context.rs` —— 上下文引擎参考实现
+- [x] `runtime-go/context/` & `runtime-rs/src/context.rs` —— 上下文引擎参考实现（含 memory / prompt，ch04–ch06 Round 2 落地）
 
 ## Part III — Execution（执行系统）
 
@@ -31,7 +31,7 @@
 
 ## 里程碑
 
-- **M1 Foundation**：Part I 完成 + ADR-001 落地。
-- **M2 Context**：Part II 完成，`runtime-go/context/` 与 `runtime-rs/src/context.rs` 均可运行 demo。
-- **M3 Execution**：Part III 完成，端到端跑通一个最小 Agent。
-- **M4 Evolution**：Part IV 完成，配套评测框架。
+- [x] **M1 Foundation**：Part I 完成 + ADR-001 落地。
+- [x] **M2 Context**：Part II 完成，`runtime-go/context/` 与 `runtime-rs/src/context.rs` 均可运行 demo。（已收口：ch04–ch06 章节文字 + Go/Rust 参考实现全部落地，`mkdocs build --strict` 通过并已部署到 GitHub Pages）
+- [ ] **M3 Execution**：Part III 完成，端到端跑通一个最小 Agent。
+- [ ] **M4 Evolution**：Part IV 完成，配套评测框架。

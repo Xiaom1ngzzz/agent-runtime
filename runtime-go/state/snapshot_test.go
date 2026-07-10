@@ -6,7 +6,7 @@ package state_test
 //  2. 每追加一条 TurnEnded 就拍一个 Snapshot(§3.6.2 Turn 边界策略);
 //  3. 丢弃"当前 State",从最新 Snapshot + LoadFrom 恢复;
 //  4. 断言恢复出的 SessionView 与"从零 Fold 全部 20 条"相等;
-//  5. 断言恢复只 replay 了 Turn 3 之后的少量事件。
+//  5. 断言恢复只 replay 了恰好 1 条事件(e20=TaskEnded)。
 //
 // 另外两条断言:
 //   - 未知 EventType 走 wire 层 unknown type 报错;
@@ -71,7 +71,8 @@ func TestSnapshotReplay(t *testing.T) {
 	// 快照直接作为初始 view 注入。
 	freshState.LoadSnapshot(sid, snap.View)
 
-	// LoadFrom 拿到快照之后的所有事件:e19 = TaskEnded(seq=20 之后追加的那一条)。
+	// LoadFrom 拿到快照之后的所有事件:恰好 1 条,e20 = TaskEnded
+	// (最后一次 snapshot 停在 e19=TurnEnded/r3,它之后只追加了 TaskEnded)。
 	store := rt.EventStore.(*memfakes.EventStore)
 	remaining, err := store.LoadFrom(sid, snap.Seq)
 	must(err)
@@ -94,9 +95,9 @@ func TestSnapshotReplay(t *testing.T) {
 		t.Fatalf("recovered view != full-fold view:\n  recovered=%+v\n  full=%+v", recovered, full)
 	}
 
-	// ---- 断言 2:恢复只 replay 了少量事件(理想情况 = TaskEnded 一条) ----
-	if got := len(remaining); got > 3 {
-		t.Fatalf("expected ≤3 events replayed after latest snapshot, got %d", got)
+	// ---- 断言 2:恢复只 replay 了恰好 1 条事件(e20 = TaskEnded) ----
+	if got := len(remaining); got != 1 {
+		t.Fatalf("expected exactly 1 event replayed after latest snapshot, got %d", got)
 	}
 }
 

@@ -112,11 +112,12 @@ fn snapshot_replay() {
     let mut fresh = StateFake::new();
     fresh.load_snapshot(sid, snap.view.clone());
 
+    // 最后一次 snapshot 停在 e19=TurnEnded/r3,它之后只追加了 e20=TaskEnded。
     let remaining = store.lock().unwrap().load_from(sid, snap.seq).unwrap();
-    assert!(
-        remaining.len() <= 3,
-        "expected ≤3 events replayed after latest snapshot, got {}",
-        remaining.len()
+    assert_eq!(
+        remaining.len(),
+        1,
+        "expected exactly 1 event replayed after latest snapshot (e20=TaskEnded)"
     );
     fresh.apply(&remaining).unwrap();
 
