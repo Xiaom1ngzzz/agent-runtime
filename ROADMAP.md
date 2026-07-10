@@ -15,7 +15,7 @@
 
 - [x] `chapters/ch04-context-engine.md` —— Context Engine（文字，代码 Round 2 落地）
 - [x] `chapters/ch05-memory.md` —— Memory Architecture（文字，代码 Round 2 落地）
-- [ ] `chapters/ch06-prompt-compiler.md` —— Prompt Compiler
+- [x] `chapters/ch06-prompt-compiler.md` —— Prompt Compiler（文字，代码 Round 2 落地）
 - [ ] `runtime-go/context/` & `runtime-rs/src/context.rs` —— 上下文引擎参考实现
 
 ## Part III — Execution（执行系统）
