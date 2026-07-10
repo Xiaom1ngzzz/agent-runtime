@@ -158,4 +158,15 @@ pub struct SessionView {
     pub max_seq: i64,
     /// 此 View 已见过的所有 Event.id；用于 caused_by 因果链校验。
     pub seen_ids: std::collections::HashSet<String>,
+
+    // ---------- ch04 Context 相关字段 ----------
+
+    /// 最近几个 Turn 的原文引用。ch04 §4.4.1。
+    pub working_set: Vec<crate::summary::TurnDigest>,
+    /// 已生成的所有结构化摘要。key = seq 起点。
+    pub summaries: HashMap<i64, crate::summary::Summary>,
+    /// 跨 Session 检索出的相关片段(ch05 展开)。
+    pub memory_refs: Vec<crate::summary::MemoryRef>,
+    /// 每个 Task 的进度快照。ch04 §4.7。
+    pub progresses: HashMap<String, crate::summary::Progress>,
 }

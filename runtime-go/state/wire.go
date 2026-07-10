@@ -33,17 +33,20 @@ type EventDTO struct {
 // payloadFactory 决定"type 字符串 → 空 payload 实例"。
 // 新增 EventType 必须在此加一行,否则反序列化拿到 unknown type 错误(§3.8)。
 var payloadFactory = map[domain.EventType]func() domain.EventPayload{
-	domain.EvtSessionOpened:     func() domain.EventPayload { return &domain.PayloadSessionOpened{} },
-	domain.EvtTaskCreated:       func() domain.EventPayload { return &domain.PayloadTaskCreated{} },
-	domain.EvtTaskEnded:         func() domain.EventPayload { return &domain.PayloadTaskEnded{} },
-	domain.EvtTurnStarted:       func() domain.EventPayload { return &domain.PayloadTurnStarted{} },
-	domain.EvtTurnEnded:         func() domain.EventPayload { return &domain.PayloadTurnEnded{} },
-	domain.EvtUserSpoke:         func() domain.EventPayload { return &domain.PayloadUserSpoke{} },
-	domain.EvtLLMRequested:      func() domain.EventPayload { return &domain.PayloadLLMRequested{} },
-	domain.EvtLLMReplied:        func() domain.EventPayload { return &domain.PayloadLLMReplied{} },
-	domain.EvtToolCalled:        func() domain.EventPayload { return &domain.PayloadToolCalled{} },
-	domain.EvtToolReturned:      func() domain.EventPayload { return &domain.PayloadToolReturned{} },
-	domain.EvtContextCompressed: func() domain.EventPayload { return &domain.PayloadContextCompressed{} },
+	domain.EvtSessionOpened:      func() domain.EventPayload { return &domain.PayloadSessionOpened{} },
+	domain.EvtTaskCreated:        func() domain.EventPayload { return &domain.PayloadTaskCreated{} },
+	domain.EvtTaskEnded:          func() domain.EventPayload { return &domain.PayloadTaskEnded{} },
+	domain.EvtTurnStarted:        func() domain.EventPayload { return &domain.PayloadTurnStarted{} },
+	domain.EvtTurnEnded:          func() domain.EventPayload { return &domain.PayloadTurnEnded{} },
+	domain.EvtUserSpoke:          func() domain.EventPayload { return &domain.PayloadUserSpoke{} },
+	domain.EvtLLMRequested:       func() domain.EventPayload { return &domain.PayloadLLMRequested{} },
+	domain.EvtLLMReplied:         func() domain.EventPayload { return &domain.PayloadLLMReplied{} },
+	domain.EvtToolCalled:         func() domain.EventPayload { return &domain.PayloadToolCalled{} },
+	domain.EvtToolReturned:       func() domain.EventPayload { return &domain.PayloadToolReturned{} },
+	domain.EvtContextCompressed:  func() domain.EventPayload { return &domain.PayloadContextCompressed{} },
+	domain.EvtCompressionSkipped: func() domain.EventPayload { return &domain.PayloadCompressionSkipped{} },
+	domain.EvtProgressUpdated:    func() domain.EventPayload { return &domain.PayloadProgressUpdated{} },
+	domain.EvtMemoryQueried:      func() domain.EventPayload { return &domain.PayloadMemoryQueried{} },
 }
 
 // MarshalEvent 序列化一条 Event 为 JSON。Type 已由 domain.Event 显式携带,

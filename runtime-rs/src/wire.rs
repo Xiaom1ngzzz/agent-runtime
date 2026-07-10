@@ -165,9 +165,21 @@ mod tests {
     #[test]
     fn round_trip_context_compressed() {
         round_trip(EventPayload::ContextCompressed(PayloadContextCompressed {
+            from_seq: 100,
+            to_seq: 200,
+            strategy: "turns:8".into(),
             from_tokens: 8000,
             to_tokens: 2000,
-            strategy: "summary-v1".into(),
+            summary: crate::summary::Summary {
+                session_id: "s1".into(),
+                task_id: "t1".into(),
+                from_seq: 100,
+                to_seq: 200,
+                user_intents: vec!["查天气".into()],
+                model_used: "claude-opus-4-7".into(),
+                confidence: 0.9,
+                ..Default::default()
+            },
         }));
     }
 

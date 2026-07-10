@@ -171,13 +171,39 @@ fn apply_one(view: &mut SessionView, e: &Event) {
             );
         }
         EventPayload::TurnEnded(p) => {
+            let mut index = 0i32;
             if let Some(t) = view.last_turn.get_mut(&e.task_id) {
                 t.status = p.status;
                 t.tokens_in = p.tokens_in;
                 t.tokens_out = p.tokens_out;
                 t.cost_us = p.cost_us;
                 t.latency_ms = p.latency_ms;
+                index = t.index;
             }
+            // ch04: 追加 TurnDigest 到 WorkingSet(§4.4.1)。
+            view.working_set.push(agent_runtime_rs::summary::TurnDigest {
+                turn_id: e.turn_id.clone(),
+                task_id: e.task_id.clone(),
+                index,
+                from_seq: e.seq,
+                to_seq: e.seq,
+                superseded: false,
+            });
+        }
+        EventPayload::ContextCompressed(p) => {
+            // ch04 §4.5.3: 存 Summary + mark 覆盖的 TurnDigest 为 Superseded。
+            view.summaries.insert(p.from_seq, p.summary.clone());
+            for d in view.working_set.iter_mut() {
+                if d.to_seq >= p.from_seq && d.from_seq <= p.to_seq {
+                    d.superseded = true;
+                }
+            }
+        }
+        EventPayload::ProgressUpdated(p) => {
+            view.progresses.insert(p.task_id.clone(), p.progress.clone());
+        }
+        EventPayload::MemoryQueried(p) => {
+            view.memory_refs.extend(p.refs.iter().cloned());
         }
         _ => {}
     }

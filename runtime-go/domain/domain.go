@@ -86,17 +86,20 @@ type Event struct {
 type EventType string
 
 const (
-	EvtSessionOpened     EventType = "SessionOpened"
-	EvtTaskCreated       EventType = "TaskCreated"
-	EvtTaskEnded         EventType = "TaskEnded"
-	EvtTurnStarted       EventType = "TurnStarted"
-	EvtTurnEnded         EventType = "TurnEnded"
-	EvtUserSpoke         EventType = "UserSpoke"
-	EvtLLMRequested      EventType = "LLMRequested"
-	EvtLLMReplied        EventType = "LLMReplied"
-	EvtToolCalled        EventType = "ToolCalled"
-	EvtToolReturned      EventType = "ToolReturned"
-	EvtContextCompressed EventType = "ContextCompressed"
+	EvtSessionOpened      EventType = "SessionOpened"
+	EvtTaskCreated        EventType = "TaskCreated"
+	EvtTaskEnded          EventType = "TaskEnded"
+	EvtTurnStarted        EventType = "TurnStarted"
+	EvtTurnEnded          EventType = "TurnEnded"
+	EvtUserSpoke          EventType = "UserSpoke"
+	EvtLLMRequested       EventType = "LLMRequested"
+	EvtLLMReplied         EventType = "LLMReplied"
+	EvtToolCalled         EventType = "ToolCalled"
+	EvtToolReturned       EventType = "ToolReturned"
+	EvtContextCompressed  EventType = "ContextCompressed"
+	EvtCompressionSkipped EventType = "CompressionSkipped"
+	EvtProgressUpdated    EventType = "ProgressUpdated"
+	EvtMemoryQueried      EventType = "MemoryQueried"
 )
 
 // ---------- LLM 交互类型 ----------
@@ -155,4 +158,21 @@ type SessionView struct {
 	LastTurn map[string]Turn // taskID -> latest Turn
 	MaxSeq   int64           // 此 View 已折叠到的最大 seq；用于 §3.5.4 单调校验与 §3.6 Snapshot。
 	SeenIDs  map[string]bool // 此 View 已见过的所有 Event.ID；用于 caused_by 因果链校验。
+
+	// ---------- ch04 Context 相关字段 ----------
+
+	// WorkingSet 是"最近几个 Turn 的原文引用"。ch04 §4.4.1。
+	// Fold 时:每来一条 TurnEnded 就 append;Compressor 覆盖过的段被 mark Superseded。
+	WorkingSet []TurnDigest
+
+	// Summaries 是"已生成的所有结构化摘要"。key = seq 起点(便于按范围检索)。
+	// Fold 时:每来一条 ContextCompressed 就 insert/merge。
+	Summaries map[int64]Summary
+
+	// MemoryRefs 是"跨 Session 检索出的相关片段"。ch05 展开;ch04 只存字段。
+	MemoryRefs []MemoryRef
+
+	// Progresses 是"每个 Task 的进度快照"。ch04 §4.7。
+	// Fold 时:每来一条 ProgressUpdated 就替换 Progresses[taskID]。
+	Progresses map[string]Progress
 }

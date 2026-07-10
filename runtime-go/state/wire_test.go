@@ -1,6 +1,7 @@
 package state
 
 import (
+	"reflect"
 	"testing"
 
 	"agent-runtime-go/domain"
@@ -28,7 +29,13 @@ func TestWireRoundTrip(t *testing.T) {
 			Goal: "查天气", Budget: domain.Budget{MaxTokens: 8000},
 		}, domain.EvtTaskCreated},
 		{"ContextCompressed", domain.PayloadContextCompressed{
-			FromTokens: 8000, ToTokens: 2000, Strategy: "summary-v1",
+			FromSeq: 100, ToSeq: 200, Strategy: "turns:8",
+			FromTokens: 8000, ToTokens: 2000,
+			Summary: domain.Summary{
+				SessionID: "s1", TaskID: "t1", FromSeq: 100, ToSeq: 200,
+				UserIntents: []string{"查天气"},
+				ModelUsed:   "claude-opus-4-7", Confidence: 0.9,
+			},
 		}, domain.EvtContextCompressed},
 	}
 	for _, tc := range cases {
@@ -54,7 +61,7 @@ func TestWireRoundTrip(t *testing.T) {
 			if got.Seq != original.Seq || got.CausedBy != original.CausedBy {
 				t.Fatalf("seq/caused_by: got %+v", got)
 			}
-			if got.Payload != original.Payload {
+			if !reflect.DeepEqual(got.Payload, original.Payload) {
 				t.Fatalf("payload mismatch: got %#v, want %#v", got.Payload, original.Payload)
 			}
 		})

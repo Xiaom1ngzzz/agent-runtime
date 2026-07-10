@@ -173,6 +173,12 @@ func (s *State) LoadSnapshot(sessionID string, view domain.SessionView) {
 }
 
 func applyOne(v *domain.SessionView, e domain.Event) {
+	if v.Summaries == nil {
+		v.Summaries = map[int64]domain.Summary{}
+	}
+	if v.Progresses == nil {
+		v.Progresses = map[string]domain.Progress{}
+	}
 	switch p := e.Payload.(type) {
 	case domain.PayloadSessionOpened:
 		v.Session = domain.Session{ID: e.SessionID, Principal: p.Principal, CreatedAt: e.TS, LastActiveAt: e.TS}
@@ -196,6 +202,27 @@ func applyOne(v *domain.SessionView, e domain.Event) {
 		t.CostUS = p.CostUS
 		t.LatencyMS = p.LatencyMS
 		v.LastTurn[e.TaskID] = t
+		// ch04: 追加 TurnDigest 到 WorkingSet(§4.4.1)。
+		v.WorkingSet = append(v.WorkingSet, domain.TurnDigest{
+			TurnID: e.TurnID, TaskID: e.TaskID, Index: t.Index,
+			// FromSeq/ToSeq 由更完善的实现填,这里用 e.Seq 兜底
+			FromSeq: e.Seq, ToSeq: e.Seq,
+		})
+	case domain.PayloadContextCompressed:
+		// ch04 §4.5.3: 存 Summary + mark 覆盖的 TurnDigest 为 Superseded。
+		v.Summaries[p.FromSeq] = p.Summary
+		for i := range v.WorkingSet {
+			d := &v.WorkingSet[i]
+			if d.ToSeq >= p.FromSeq && d.FromSeq <= p.ToSeq {
+				d.Superseded = true
+			}
+		}
+	case domain.PayloadProgressUpdated:
+		// ch04 §4.7: 幂等替换。
+		v.Progresses[p.TaskID] = p.Progress
+	case domain.PayloadMemoryQueried:
+		// ch05 会展开;这里只做 append。
+		v.MemoryRefs = append(v.MemoryRefs, p.Refs...)
 	}
 	if !e.TS.IsZero() {
 		v.Session.LastActiveAt = e.TS

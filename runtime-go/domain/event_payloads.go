@@ -95,12 +95,45 @@ type PayloadToolReturned struct {
 
 func (PayloadToolReturned) eventPayload() {}
 
-// ---------- 上下文压缩 ----------
+// ---------- 上下文压缩 (ch04) ----------
 
+// PayloadContextCompressed 说明"哪一段 Event 被压缩成什么摘要"。见 ch04 §4.5.3。
+// 是回放性的核心保证:摘要作为不可变事实进 EventStore。
 type PayloadContextCompressed struct {
-	FromTokens int
-	ToTokens   int
-	Strategy   string // 例如 "sliding-window" / "summarize"
+	FromSeq    int64   // 覆盖的 seq 范围起点
+	ToSeq      int64   // 覆盖的 seq 范围终点
+	Strategy   string  // "turns:8" | "task-end" | "manual" | "fallback:flat" | ...
+	Summary    Summary // 结构化摘要,见 §4.6.1
+	FromTokens int     // 压缩前估算 token(可选)
+	ToTokens   int     // 摘要后 token(可选)
 }
 
 func (PayloadContextCompressed) eventPayload() {}
+
+// PayloadCompressionSkipped 记录"这次压缩尝试失败/跳过"。见 ch04 §4.9。
+type PayloadCompressionSkipped struct {
+	Reason string // "llm_error" | "schema_invalid" | ...
+	Detail string
+}
+
+func (PayloadCompressionSkipped) eventPayload() {}
+
+// ---------- 任务进度 (ch04 §4.7) ----------
+
+// PayloadProgressUpdated 记录一次 Progress 折叠。幂等:同 Version 写两次结果一样。
+type PayloadProgressUpdated struct {
+	TaskID   string
+	Progress Progress
+}
+
+func (PayloadProgressUpdated) eventPayload() {}
+
+// ---------- Memory (ch05 会展开) ----------
+
+// PayloadMemoryQueried 记录一次向量库/KV 检索的结果。ch04 只定义,ch05 用。
+type PayloadMemoryQueried struct {
+	Query string
+	Refs  []MemoryRef
+}
+
+func (PayloadMemoryQueried) eventPayload() {}

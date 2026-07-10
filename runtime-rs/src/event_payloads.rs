@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::domain::{Budget, Message, TaskStatus, Tool, ToolCall, TurnStatus};
+use crate::summary::{MemoryRef, Progress, Summary};
 
 /// EventType 与 Payload 的 discriminant 合并成一个类型。
 /// 判别一个 Event 的类型 = match 它的 Payload。
@@ -24,6 +25,9 @@ pub const EVT_LLM_REPLIED: EventType = "LLMReplied";
 pub const EVT_TOOL_CALLED: EventType = "ToolCalled";
 pub const EVT_TOOL_RETURNED: EventType = "ToolReturned";
 pub const EVT_CONTEXT_COMPRESSED: EventType = "ContextCompressed";
+pub const EVT_COMPRESSION_SKIPPED: EventType = "CompressionSkipped";
+pub const EVT_PROGRESS_UPDATED: EventType = "ProgressUpdated";
+pub const EVT_MEMORY_QUERIED: EventType = "MemoryQueried";
 
 /// 与 Go 版 `EventPayload` marker interface 对等。
 /// 在 Rust 里用封闭 enum：外部无法新增 variant，消费方 match 必须穷举。
@@ -44,6 +48,9 @@ pub enum EventPayload {
     ToolCalled(PayloadToolCalled),
     ToolReturned(PayloadToolReturned),
     ContextCompressed(PayloadContextCompressed),
+    CompressionSkipped(PayloadCompressionSkipped),
+    ProgressUpdated(PayloadProgressUpdated),
+    MemoryQueried(PayloadMemoryQueried),
 }
 
 impl EventPayload {
@@ -60,6 +67,9 @@ impl EventPayload {
             EventPayload::ToolCalled(_)        => EVT_TOOL_CALLED,
             EventPayload::ToolReturned(_)      => EVT_TOOL_RETURNED,
             EventPayload::ContextCompressed(_) => EVT_CONTEXT_COMPRESSED,
+            EventPayload::CompressionSkipped(_) => EVT_COMPRESSION_SKIPPED,
+            EventPayload::ProgressUpdated(_) => EVT_PROGRESS_UPDATED,
+            EventPayload::MemoryQueried(_) => EVT_MEMORY_QUERIED,
         }
     }
 }
@@ -132,9 +142,31 @@ pub struct PayloadToolReturned {
     pub is_error: bool,
 }
 
+/// 与 Go 版 `PayloadContextCompressed` 对齐。见 ch04 §4.5.3。
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadContextCompressed {
+    pub from_seq: i64,
+    pub to_seq: i64,
+    pub strategy: String,
+    pub summary: Summary,
     pub from_tokens: i64,
     pub to_tokens: i64,
-    pub strategy: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PayloadCompressionSkipped {
+    pub reason: String,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PayloadProgressUpdated {
+    pub task_id: String,
+    pub progress: Progress,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PayloadMemoryQueried {
+    pub query: String,
+    pub refs: Vec<MemoryRef>,
 }
