@@ -84,6 +84,7 @@ nav:
       - Ch03 · State & Event Model: chapters/ch03-state-event.md
   - Part II · Context System:
       - Ch04 · Context Engine: chapters/ch04-context-engine.md
+      - Ch05 · Memory Architecture: chapters/ch05-memory.md
   - Architecture Decisions:
       - ADR 模板: adr/ADR-000.md
       - ADR-001 · Runtime 边界与职责: adr/ADR-001-runtime-domain.md
