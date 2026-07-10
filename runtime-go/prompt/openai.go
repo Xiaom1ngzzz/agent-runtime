@@ -9,7 +9,7 @@ import "agent-runtime-go/domain"
 //   - assistant.tool_calls 是独立字段,不是 content 数组项
 //   - tool response 是独立 role=tool 的消息
 //   - Tool schema key 是 parameters
-//   - 允许连续 user(会被合并)
+//   - 允许连续 user(当前实现原样保留,不主动合并)
 type OpenAICompiler struct {
 	Model string
 }

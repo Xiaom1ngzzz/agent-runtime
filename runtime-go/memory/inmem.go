@@ -2,6 +2,7 @@ package memory
 
 import (
 	stdctx "context"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -39,7 +40,8 @@ func (s *InMemStore) Upsert(_ stdctx.Context, item domain.MemoryItem) error {
 	if existing, ok := s.items[item.Key]; ok {
 		if item.Version < existing.Version {
 			// 拒绝倒退,§5.9 MemoryUpsertRejected
-			return nil
+			return fmt.Errorf("memory version regression for key %q: got %d, current %d",
+				item.Key, item.Version, existing.Version)
 		}
 		if item.Version == existing.Version {
 			// 幂等,忽略

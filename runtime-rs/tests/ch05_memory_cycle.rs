@@ -185,3 +185,20 @@ fn ch05_min_score_filter() {
     let found_b = refs.iter().any(|r| r.key == "b");
     assert!(found_b, "expected 'b' in high-score results");
 }
+
+#[test]
+fn ch05_version_regression_rejected() {
+    let mem = InMemStore::new();
+    mem.upsert(MemoryItem {
+        id: "pref".into(), key: "user:42:diet".into(), content: "no_spicy".into(),
+        kind: MemoryKind::Semantic, version: 2,
+        ..Default::default()
+    }).unwrap();
+
+    let err = mem.upsert(MemoryItem {
+        id: "pref".into(), key: "user:42:diet".into(), content: "spicy".into(),
+        kind: MemoryKind::Semantic, version: 1,
+        ..Default::default()
+    }).expect_err("version regression should fail");
+    assert!(err.0.contains("version regression"));
+}

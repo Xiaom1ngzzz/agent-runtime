@@ -1,9 +1,10 @@
-//! LayeredContextEngine —— 六层输入的纯函数拼装。见 ch04 §4.4。
+//! LayeredContextEngine —— 六层输入的确定性只读投影。见 ch04 §4.4。
 //!
 //! 与 `runtime-go/context/layered.go` 对齐。
 //!
-//! **必须是纯函数**:不做 IO,不读时钟,不发起 LLM 调用。
-//! 摘要/检索由 Compressor(ch04 §4.5)在上游产出 Event,Assemble 只读已有的事实。
+//! **必须是确定性的只读投影**:不写状态、不读时钟、不发起 LLM/Memory 请求。
+//! 摘要/检索由 Compressor(ch04 §4.5)在上游产出 Event;Assemble 只读 State,
+//! 并可从 EventStore 展开 WorkingSet 指向的消息原文。
 
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -12,11 +13,11 @@ use crate::context::{ContextEngine, ContextError};
 use crate::domain::{Context, Event, Message, Task, Tool};
 use crate::event_payloads::EventPayload;
 use crate::state::{EventStore, State};
-use crate::summary::{MemoryRef, Summary, TurnDigest};
+use crate::summary::{MemoryRef, Progress, Summary, TurnDigest};
 
 /// ch04 §4.4 的落地实现。
 ///
-/// Assemble 依然 **不** 调 LLM,也不做外部 IO —— 只读结构化事实。
+/// Assemble 不调 LLM、不写外部状态;唯一 IO 是确定性地只读 State/EventStore。
 pub struct LayeredContextEngine {
     pub state: Arc<Mutex<dyn State + Send>>,
     pub store: Option<Arc<Mutex<dyn EventStore + Send>>>,
@@ -51,9 +52,21 @@ impl ContextEngine for LayeredContextEngine {
             });
         }
 
-        // 3. Compressed History —— 覆盖 seq 落在 WorkingSet 之外的 Summary。
+        // 3. Progress
+        if let Some(progress) = view.progresses.get(task_id) {
+            msgs.push(Message {
+                role: "system".into(),
+                content: render_progress(progress),
+                ..Default::default()
+            });
+        }
+
+        // 4. Compressed History —— 覆盖 seq 落在 WorkingSet 之外的 Summary。
         let min_seq = working_set_min_seq(&view.working_set);
         for sum in view.summaries.values() {
+            if !sum.task_id.is_empty() && !task_id.is_empty() && sum.task_id != task_id {
+                continue;
+            }
             if min_seq > 0 && sum.to_seq >= min_seq {
                 continue; // 该 Summary 覆盖段仍在 WorkingSet 原文里
             }
@@ -64,7 +77,7 @@ impl ContextEngine for LayeredContextEngine {
             });
         }
 
-        // 4. Working Set 展开原文。
+        // 5. Working Set 展开原文。
         if let Some(store_arc) = &self.store {
             let events: Vec<Event> = {
                 let s = store_arc.lock().unwrap();
@@ -79,7 +92,7 @@ impl ContextEngine for LayeredContextEngine {
             }
         }
 
-        // 5. Memory Refs
+        // 6. Memory Refs:放在 Working Set 之后,使检索证据靠近消息尾部。
         for r in &view.memory_refs {
             msgs.push(Message {
                 role: "system".into(),
@@ -105,6 +118,33 @@ fn render_task_frame(task: &Task) -> String {
         "<task_frame>\ngoal: {}\nbudget_tokens: {}\n</task_frame>",
         task.goal, task.budget.max_tokens
     )
+}
+
+fn render_progress(p: &Progress) -> String {
+    let mut out = format!(
+        "<task_progress version={} updated_at=\"{}\">\ngoal: {}\n",
+        p.version, p.updated_at, p.goal
+    );
+    for step in &p.done {
+        out.push_str(&format!(
+            "done: [{:?}] {} | {} | {}\n",
+            step.kind, step.intent, step.action, step.observation
+        ));
+    }
+    for step in &p.next {
+        out.push_str(&format!(
+            "next: [{:?}] {} | {}\n",
+            step.kind, step.intent, step.action
+        ));
+    }
+    for open in &p.open {
+        out.push_str(&format!(
+            "open: {} (raised_at={})\n",
+            open.question, open.raised_at
+        ));
+    }
+    out.push_str("</task_progress>");
+    out
 }
 
 fn render_summary(s: &Summary) -> String {

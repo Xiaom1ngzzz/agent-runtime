@@ -30,7 +30,12 @@ const embedDim = 64
 
 func TestCh05MemoryCycle(t *testing.T) {
 	ctx := stdctx.Background()
-	must := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	// ---------- 1. 搭建 MemoryStore + 导入种子数据 ----------
 	mem := memory.NewInMemStore()
@@ -167,7 +172,12 @@ func TestCh05MemoryCycle(t *testing.T) {
 func TestCh05MinScoreFilter(t *testing.T) {
 	ctx := stdctx.Background()
 	mem := memory.NewInMemStore()
-	must := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	// 两条 embedding 差异很大的 item
 	must(mem.Upsert(ctx, domain.MemoryItem{
@@ -200,5 +210,22 @@ func TestCh05MinScoreFilter(t *testing.T) {
 	}
 	if !foundB {
 		t.Fatal("expected 'b' in high-score results (self match)")
+	}
+}
+
+func TestCh05VersionRegressionRejected(t *testing.T) {
+	ctx := stdctx.Background()
+	mem := memory.NewInMemStore()
+	if err := mem.Upsert(ctx, domain.MemoryItem{
+		ID: "pref", Key: "user:42:diet", Content: "no_spicy",
+		Kind: domain.MemorySemantic, Version: 2,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := mem.Upsert(ctx, domain.MemoryItem{
+		ID: "pref", Key: "user:42:diet", Content: "spicy",
+		Kind: domain.MemorySemantic, Version: 1,
+	}); err == nil {
+		t.Fatal("expected version regression error")
 	}
 }

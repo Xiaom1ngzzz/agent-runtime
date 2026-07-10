@@ -1,7 +1,7 @@
 //! MemoryStore —— 与 `runtime-go/memory/` 对齐。
 //!
-//! 见 ch05。Memory 与 EventStore 是正交的两个轴:前者不可变、单 Session、精确;
-//! 后者可变、跨 Session、模糊。Retrieval 不在 Assemble 里发生(§5.2.2)。
+//! 见 ch05。Memory 与 EventStore 是正交的两个轴:EventStore 不可变、单 Session、精确;
+//! Memory 可变、跨 Session、模糊。Retrieval 不在 Assemble 里发生(§5.2.2)。
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -98,7 +98,10 @@ impl MemoryStore for InMemStore {
         let mut guard = self.items.lock().unwrap();
         if let Some(existing) = guard.get(&item.key) {
             if item.version < existing.version {
-                return Ok(()); // 拒绝倒退,§5.9
+                return Err(MemoryError(format!(
+                    "memory version regression for key {:?}: got {}, current {}",
+                    item.key, item.version, existing.version
+                )));
             }
             if item.version == existing.version {
                 return Ok(()); // 幂等

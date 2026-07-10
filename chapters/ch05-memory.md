@@ -162,7 +162,7 @@ type MemoryItem struct {
 极简契约,类似 ch03 的 EventStore:
 
 ```go
-// runtime-go/memory/memory.go(ch05 Round 2 落地)
+// runtime-go/memory/memory.go(ch05 Round 2 落地;Query 类型在 runtime-go/domain/memory.go)
 type MemoryStore interface {
     // Upsert 插入或更新。若 Key 已存在:比较 Version,新的 > 旧的才生效。
     // 幂等:同 (Key, Version) 写两次结果一致。
@@ -194,7 +194,7 @@ type Query struct {
 
 - **Upsert 幂等**:`Upsert(item) + Upsert(item)` = `Upsert(item)`。生产上重试机制的前提。
 - **Query 是纯读**:不改变任何状态。**但仍然是 IO**——不能在 Assemble 里调。
-- **顺序无关**:Query 的返回顺序按 score 降序,同 score 内的顺序不保证稳定(存储实现细节)。
+- **顺序无关**:Query 的返回顺序按 score 降序,协议不保证同 score 的顺序。L1 内存实现为了测试可复现,额外按 Key 做稳定排序;调用方不得依赖这一细节。
 - **过期语义**:`ExpiresAt` 已过的条目**默认不返回**,可通过 `IncludeExpired=true` 强制读(审计用)。
 - **不承诺一致性**:Upsert 后立即 Query,可能读不到(索引未刷新)。上层业务不应依赖"upsert 之后一定能查到"。
 
@@ -302,6 +302,8 @@ Query{TopK: 100, MinScore: 0}
 三条典型路径:
 
 **路径 A · Compressor 归档**(自动)
+
+> **实现状态**:本路径是生产协议设计。Round 2 的 `ByTurns` Compressor 不依赖 MemoryStore;§5.10 的测试由上层显式 Upsert 一条 Episodic Memory 来验证同样的数据形态。
 
 ```
 Compressor.Tick(sid) 检测到 Task 结束
@@ -443,19 +445,21 @@ Upsert(item{Key: "user:42:diet", Version: 3})
 
 | 触发 | 策略 | Event | 是否终止 Turn |
 |---|---|---|---|
-| MemoryStore.Query 超时 | 跳过检索,不注入 Refs | `MemoryQueryFailed{reason="timeout"}` | 否 |
+| MemoryStore.Query 超时 | 跳过检索,不注入 Refs | `MemoryQueryFailed{reason="timeout"}`(规划中) | 否 |
 | 返回结果 0 条 | 正常,不算失败 | `MemoryQueried{Refs: []}` | 否 |
-| 返回结果太多(超预算) | 按 score 取前 K,记录被丢弃的数量 | `MemoryQueried{Refs: [...], dropped=N}` | 否 |
-| MemoryStore 完全不可用 | Runtime 继续,LayeredContextEngine 跳过第 5 层 | `MemoryQueryFailed{reason="store_down"}` | 否 |
-| Upsert 冲突(Version 倒退) | 拒绝写入,记录 | `MemoryUpsertRejected{reason="version_regression"}` | 否 |
+| 返回结果太多(超预算) | 按 score 取前 K,记录被丢弃的数量 | `MemoryQueried{Refs: [...], dropped=N}`(dropped 字段规划中) | 否 |
+| MemoryStore 完全不可用 | Runtime 继续,LayeredContextEngine 跳过第 5 层 | `MemoryQueryFailed{reason="store_down"}`(规划中) | 否 |
+| Upsert 冲突(Version 倒退) | 拒绝写入,记录 | `MemoryUpsertRejected{reason="version_regression"}`(规划中) | 否 |
+
+表中标"规划中"的 EventType / 字段是失败模型的完整设计,参考实现(L1 内存档)未包含——它们在接入真实向量库后端时才有意义,届时随 ADR 引入。
+
+L1 内存实现已对 Version 倒退返回可识别错误(且不覆盖新值);`MemoryUpsertRejected` Event 留给接入上层 Loop 时落地。
 
 **核心哲学**:Memory 是"参考",不是"必需"。**Memory 全部挂掉,Runtime 仍能跑**(效果打折,但不 crash)。这与 EventStore 挂掉必然全站停摆(ch03 §3.8)形成鲜明对比。
 
 ---
 
-## 5.10 参考实现(Round 2 落地)
-
-**Round 2 会引入的代码骨架**:
+## 5.10 参考实现(Round 2 已落地)
 
 ### 5.10.1 目录结构增量
 
@@ -468,7 +472,7 @@ runtime-go/
     inmem.go             (新: 内存 fake 实现,L1 档次)
 
 runtime-rs/src/
-  memory.rs              (新: 对应 Go 的两个文件)
+  memory.rs              (新: 对应 Go 的三个文件)
 ```
 
 ### 5.10.2 端到端测试:Memory Cycle
@@ -477,10 +481,10 @@ runtime-rs/src/
 
 **场景**:
 
-1. Batch 导入 3 条 Semantic Memory(用户偏好 + 一份文档)
-2. Compressor 归档 1 条 Episodic Memory(Session Summary)
-3. 新 Session 的 Task 开始,上层 Loop 触发 `MemoryStore.Query(Semantic: "订机票", Tags: ["user:42"])`
-4. 追加 `MemoryQueried` Event,Fold → `SessionView.MemoryRefs` 有 2 条
+1. Batch 导入 3 条 Semantic Memory(用户偏好 ×2 + KB 文档)
+2. 归档 1 条 Episodic Memory(Session Summary,带 `Origin*` 溯源字段)
+3. 新 Session 的 Task 开始,上层 Loop 触发组合查询(§5.5.4):`Query{Semantic: "帮 alice 订机票", Tags: ["user:42"], SourceFilter: [...]}`
+4. 把返回的 Refs 打包成 `MemoryQueried` Event 追加,Fold → `SessionView.MemoryRefs` 非空
 5. `LayeredContextEngine.Assemble` 拼出 Context,含 `<memory_ref>` 块
 6. 回放性:全量 Fold 后 SessionView.MemoryRefs 完全一致
 
@@ -512,7 +516,7 @@ runtime-rs/src/
 ## 5.12 小结
 
 - Memory 层解决 Summary 救不了的 4 类问题:**跨 Session 偏好、组织知识、长期事实、执行 pattern**。
-- Memory 与 EventStore 是**正交的两个轴**:前者不可变、单 Session、精确;后者可变、跨 Session、模糊。
+- Memory 与 EventStore 是**正交的两个轴**:**EventStore 不可变、单 Session、精确;Memory 可变、跨 Session、模糊检索**。
 - Memory 分三层:Working(其实是 EventStore 里的 WorkingSet)/ Episodic / Semantic。ch05 主讲后两层。
 - **Retrieval 不在 Assemble 里发生**——与 ch04 §4.4.2 的纯度约束一致。查询由上层 Loop 触发,结果作为 `MemoryQueried` Event 落回 SessionView。
 - `MemoryItem` 带 `Version`、`ExpiresAt`、`Origin*` 三组字段,支持幂等 upsert、软过期、跨 Session 溯源。
@@ -529,9 +533,9 @@ runtime-rs/src/
 - [ADR-001 · Runtime 边界与职责](../adr/ADR-001-runtime-domain.md)
 - [ADR-002 · Runtime 数据流协议](../adr/ADR-002-dataflow-protocol.md)——本章 Retrieval 的纯度约束再次应用
 - [ADR-003 · Runtime 与 DDD 对应关系](../adr/ADR-003-ddd-mapping.md)——MemoryStore 是典型的 Repository
-- 参考实现(Round 2 落地):
-  - Go: `runtime-go/memory/memory.go`、`runtime-go/memory/inmem.go`、`runtime-go/domain/memory.go`
-  - Rust: `runtime-rs/src/memory.rs`
+- 参考实现(Round 2 已落地):
+  - Go: [`runtime-go/memory/memory.go`](../runtime-go/memory/memory.go)、[`runtime-go/memory/inmem.go`](../runtime-go/memory/inmem.go)、[`runtime-go/domain/memory.go`](../runtime-go/domain/memory.go)
+  - Rust: [`runtime-rs/src/memory.rs`](../runtime-rs/src/memory.rs)
 - 相关章节:`ch03-state-event.md`(§3.4 EventStore 契约对比)、`ch04-context-engine.md`(§4.2 六层输入的第 5 层,§4.5 Compressor 触发)、`ch06-prompt-compiler.md`(Memory Refs 的展开渲染)
 - 研究/工程参考:
   - MemGPT: Charles Packer et al. (2023) —— Episodic Memory 的分层设计源头

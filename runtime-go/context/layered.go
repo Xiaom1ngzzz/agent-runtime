@@ -1,8 +1,9 @@
-// Package context / layered.go —— 六层输入的纯函数拼装。见 ch04 §4.4。
+// Package context / layered.go —— 六层输入的确定性只读投影。见 ch04 §4.4。
 //
 // LayeredContextEngine 实现 ContextEngine 接口,把 SessionView 投影成 Context。
-// **必须是纯函数**:不做 IO,不读时钟,不发起 LLM 调用。
-// 摘要/检索由 Compressor(ch04 §4.5)在上游产出 Event,Assemble 只读已有的事实。
+// **必须是确定性的只读投影**:不写状态、不读时钟、不发起 LLM/Memory 请求。
+// 摘要/检索由 Compressor(ch04 §4.5)在上游产出 Event;Assemble 只读 State,
+// 并可从 EventStore 展开 WorkingSet 指向的消息原文。
 package context
 
 import (
@@ -21,7 +22,7 @@ import (
 //   - Instructions:Session 级 system prompt(六层第 1 层)。
 //   - Tools:允许的工具集(六层第 6 层)。
 //
-// Assemble 依然 **不** 调 LLM,也不做外部 IO —— 只读结构化事实。
+// Assemble 不调 LLM、不写外部状态;唯一 IO 是确定性地只读 State/EventStore。
 type LayeredContextEngine struct {
 	State        state.State
 	Store        state.EventStore // 用于取 WorkingSet 中未 Superseded 段的原文
@@ -32,11 +33,12 @@ type LayeredContextEngine struct {
 // Assemble 见 ch04 §4.4.1。
 //
 // 返回的 Messages 顺序:
-//   1. system(Instructions)
-//   2. system(TaskFrame:Goal + Budget + Constraints)
-//   3. system(Compressed History:摘要,包 <prior_summary> 标签)
-//   4. user/assistant/tool 序列(Working Set 中未 Superseded 的 Turn 原文)
-//   5. system(Memory Refs:参考资料,包 <memory_ref> 标签)
+//  1. system(Instructions)
+//  2. system(TaskFrame:Goal + Budget + Constraints)
+//  3. system(Progress:当前 Task 的进度快照,包 <task_progress> 标签)
+//  4. system(Compressed History:摘要,包 <prior_summary> 标签)
+//  5. user/assistant/tool 序列(Working Set 中未 Superseded 的 Turn 原文)
+//  6. system(Memory Refs:参考资料,包 <memory_ref> 标签;靠近消息尾部)
 func (e *LayeredContextEngine) Assemble(_ stdctx.Context, sessionID, taskID string) (domain.Context, error) {
 	view, err := e.State.View(sessionID)
 	if err != nil {
@@ -58,10 +60,21 @@ func (e *LayeredContextEngine) Assemble(_ stdctx.Context, sessionID, taskID stri
 		})
 	}
 
-	// 3. Compressed History
+	// 3. Progress
+	if progress, ok := view.Progresses[taskID]; ok {
+		msgs = append(msgs, domain.Message{
+			Role:    "system",
+			Content: renderProgress(progress),
+		})
+	}
+
+	// 4. Compressed History
 	//    只放"覆盖 seq 落在 WorkingSet 之外的" Summary,避免与原文重复。
 	minSeq := workingSetMinSeq(view.WorkingSet)
 	for fromSeq, sum := range view.Summaries {
+		if sum.TaskID != "" && taskID != "" && sum.TaskID != taskID {
+			continue
+		}
 		if minSeq > 0 && sum.ToSeq >= minSeq {
 			// 该 Summary 覆盖的段还在 WorkingSet 里(且未 Superseded 的部分会作为原文出现)
 			// 跳过以避免重复;交给 Working Set 走原文
@@ -74,7 +87,7 @@ func (e *LayeredContextEngine) Assemble(_ stdctx.Context, sessionID, taskID stri
 		})
 	}
 
-	// 4. Working Set:未 Superseded 的 Turn,展开原文。
+	// 5. Working Set:未 Superseded 的 Turn,展开原文。
 	//    Superseded 的 Turn 已经在第 3 层作为 Summary 出现。
 	if e.Store != nil {
 		events, err := e.Store.Load(sessionID)
@@ -90,7 +103,7 @@ func (e *LayeredContextEngine) Assemble(_ stdctx.Context, sessionID, taskID stri
 		}
 	}
 
-	// 5. Memory Refs
+	// 6. Memory Refs:放在 Working Set 之后,使检索证据靠近消息尾部。
 	for _, ref := range view.MemoryRefs {
 		msgs = append(msgs, domain.Message{
 			Role:    "system",
@@ -111,6 +124,23 @@ func (e *LayeredContextEngine) Assemble(_ stdctx.Context, sessionID, taskID stri
 func renderTaskFrame(task domain.Task) string {
 	return fmt.Sprintf("<task_frame>\ngoal: %s\nbudget_tokens: %d\n</task_frame>",
 		task.Goal, task.Budget.MaxTokens)
+}
+
+func renderProgress(p domain.Progress) string {
+	out := fmt.Sprintf("<task_progress version=%d updated_at=%q>\ngoal: %s\n",
+		p.Version, p.UpdatedAt, p.Goal)
+	for _, step := range p.Done {
+		out += fmt.Sprintf("done: [%s] %s | %s | %s\n",
+			step.Kind, step.Intent, step.Action, step.Observation)
+	}
+	for _, step := range p.Next {
+		out += fmt.Sprintf("next: [%s] %s | %s\n", step.Kind, step.Intent, step.Action)
+	}
+	for _, loop := range p.Open {
+		out += fmt.Sprintf("open: %s (raised_at=%s)\n", loop.Question, loop.RaisedAt)
+	}
+	out += "</task_progress>"
+	return out
 }
 
 // renderSummary 把结构化 Summary 序列化成 LLM 可读的文本,包在 <prior_summary> 标签里。

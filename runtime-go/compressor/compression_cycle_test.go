@@ -10,7 +10,7 @@ package compressor_test
 //      - 追加 ContextCompressed Event。
 //      - Fold 后 WorkingSet 里前 2 个 TurnDigest 被 mark Superseded。
 //   4. 用 LayeredContextEngine.Assemble 拼出 Context,应满足:
-//      - Instructions + TaskFrame + <prior_summary> + 未 Superseded turns 原文。
+//      - Instructions + TaskFrame + <task_progress> + <prior_summary> + 未 Superseded turns 原文。
 //      - 已 Superseded 的 turn 不再出现原文。
 //   5. 断言 Event 流可回放:重新 Fold → 得到相同 SessionView。
 
@@ -123,6 +123,22 @@ func TestCh04CompressionCycle(t *testing.T) {
 	if !compressionHappened {
 		t.Fatal("expected at least one ContextCompressed event, got none")
 	}
+	must(appendAll(rt, sid, tid, "", event(
+		domain.EvtProgressUpdated,
+		domain.PayloadProgressUpdated{
+			TaskID: tid,
+			Progress: domain.Progress{
+				Goal: "盯天气", Version: 1, UpdatedAt: "after-r6",
+				Done: []domain.Step{{
+					Intent: "查询天气", Action: "weather", Observation: "temp=26",
+					Kind: domain.StepToolCall,
+				}},
+				Next: []domain.Step{{
+					Intent: "汇总结果", Action: "respond", Kind: domain.StepDecision,
+				}},
+			},
+		},
+	)))
 
 	// ---------- 断言 1:View 里有 Summary + 部分 TurnDigest 被 Superseded ----------
 	view, err := st.View(sid)
@@ -140,18 +156,23 @@ func TestCh04CompressionCycle(t *testing.T) {
 		t.Fatal("expected at least one TurnDigest to be Superseded")
 	}
 
-	// ---------- 断言 2:LayeredContextEngine.Assemble 拼出的 Context 包含 <prior_summary> ----------
+	// ---------- 断言 2:Assemble 拼出的 Context 包含 Summary 与 Progress ----------
 	c, err := layered.Assemble(ctx, sid, tid)
 	must(err)
-	found := false
+	foundSummary, foundProgress := false, false
 	for _, m := range c.Messages {
 		if strings.Contains(m.Content, "<prior_summary>") {
-			found = true
-			break
+			foundSummary = true
+		}
+		if strings.Contains(m.Content, "<task_progress") {
+			foundProgress = true
 		}
 	}
-	if !found {
+	if !foundSummary {
 		t.Fatal("Assemble output should contain <prior_summary> block")
+	}
+	if !foundProgress {
+		t.Fatal("Assemble output should contain <task_progress> block")
 	}
 
 	// ---------- 断言 3:回放性 —— 全量 Fold 后视图相同 ----------

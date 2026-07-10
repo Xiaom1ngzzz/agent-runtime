@@ -37,6 +37,27 @@ func TestWireRoundTrip(t *testing.T) {
 				ModelUsed:   "claude-opus-4-7", Confidence: 0.9,
 			},
 		}, domain.EvtContextCompressed},
+		{"CompressionSkipped", domain.PayloadCompressionSkipped{
+			Reason: "summarizer_failed", Detail: "timeout",
+		}, domain.EvtCompressionSkipped},
+		{"ProgressUpdated", domain.PayloadProgressUpdated{
+			TaskID: "t1",
+			Progress: domain.Progress{
+				Goal: "查天气", Version: 2, UpdatedAt: "e41",
+				Done: []domain.Step{{
+					Intent: "查询北京天气", Action: "weather", Observation: "26C",
+					Kind: domain.StepToolCall,
+				}},
+				Open: []domain.OpenLoop{{Question: "是否需要湿度", RaisedAt: "e40"}},
+			},
+		}, domain.EvtProgressUpdated},
+		{"MemoryQueried", domain.PayloadMemoryQueried{
+			Query: "用户温度偏好",
+			Refs: []domain.MemoryRef{{
+				Source: "kv:profile", Key: "temperature_unit", Content: "摄氏度",
+				Score: 0.98, QueriedAtSeq: 41,
+			}},
+		}, domain.EvtMemoryQueried},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

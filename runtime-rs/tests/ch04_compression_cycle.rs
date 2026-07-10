@@ -13,12 +13,12 @@ use agent_runtime_rs::context::ContextEngine;
 use agent_runtime_rs::domain::{Budget, Event, LLMResponse, Message, Tool, ToolCall};
 use agent_runtime_rs::event_payloads::{
     EventPayload, PayloadContextCompressed, PayloadSessionOpened, PayloadTaskCreated,
-    PayloadTurnStarted, PayloadUserSpoke,
+    PayloadProgressUpdated, PayloadTurnStarted, PayloadUserSpoke,
 };
 use agent_runtime_rs::layered::LayeredContextEngine;
 use agent_runtime_rs::runtime::Runtime;
 use agent_runtime_rs::state::{EventStore as _, State as _};
-use agent_runtime_rs::summary::{Decision, Summary};
+use agent_runtime_rs::summary::{Decision, Progress, Step, StepKind, Summary};
 
 use fakes::{
     append_all, ContextEngineFake, EventStoreFake, ExecutorFake, LLMScript,
@@ -129,6 +129,30 @@ fn ch04_compression_cycle() {
         }
     }
     assert!(compression_happened, "expected at least one ContextCompressed event");
+    append_all(&rt, sid, tid, "", vec![
+        EventPayload::ProgressUpdated(PayloadProgressUpdated {
+            task_id: tid.into(),
+            progress: Progress {
+                goal: "盯天气".into(),
+                version: 1,
+                updated_at: "after-r6".into(),
+                done: vec![Step {
+                    intent: "查询天气".into(),
+                    action: "weather".into(),
+                    observation: "temp=26".into(),
+                    kind: StepKind::ToolCall,
+                    ..Default::default()
+                }],
+                next: vec![Step {
+                    intent: "汇总结果".into(),
+                    action: "respond".into(),
+                    kind: StepKind::Decision,
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        }),
+    ]);
 
     // ---------- 断言 1:View 里有 Summary + 部分 TurnDigest 被 Superseded ----------
     let view = state.lock().unwrap().view(sid).unwrap();
@@ -143,6 +167,8 @@ fn ch04_compression_cycle() {
         .iter()
         .any(|m| m.content.contains("<prior_summary>"));
     assert!(has_summary, "Assemble output should contain <prior_summary>");
+    let has_progress = ctx.messages.iter().any(|m| m.content.contains("<task_progress"));
+    assert!(has_progress, "Assemble output should contain <task_progress>");
 
     // ---------- 断言 3:回放性 —— 全量 Fold 后视图相同 ----------
     let all_events: Vec<Event> = store.lock().unwrap().snapshot();

@@ -19,15 +19,15 @@ import (
 // EventDTO 是 domain.Event 的 wire-format 表示。字段与 domain.Event 一一对齐;
 // Payload 用 json.RawMessage 延后解码,交由 payloadFactory 分派。
 type EventDTO struct {
-	ID        string            `json:"id"`
-	SessionID string            `json:"session_id"`
-	TaskID    string            `json:"task_id,omitempty"`
-	TurnID    string            `json:"turn_id,omitempty"`
-	Type      domain.EventType  `json:"type"`
-	Payload   json.RawMessage   `json:"payload"`
-	TS        time.Time         `json:"ts"`
-	CausedBy  string            `json:"caused_by,omitempty"`
-	Seq       int64             `json:"seq"`
+	ID        string           `json:"id"`
+	SessionID string           `json:"session_id"`
+	TaskID    string           `json:"task_id,omitempty"`
+	TurnID    string           `json:"turn_id,omitempty"`
+	Type      domain.EventType `json:"type"`
+	Payload   json.RawMessage  `json:"payload"`
+	TS        time.Time        `json:"ts"`
+	CausedBy  string           `json:"caused_by,omitempty"`
+	Seq       int64            `json:"seq"`
 }
 
 // payloadFactory 决定"type 字符串 → 空 payload 实例"。
@@ -122,6 +122,12 @@ func derefPayload(p domain.EventPayload) domain.EventPayload {
 	case *domain.PayloadToolReturned:
 		return *v
 	case *domain.PayloadContextCompressed:
+		return *v
+	case *domain.PayloadCompressionSkipped:
+		return *v
+	case *domain.PayloadProgressUpdated:
+		return *v
+	case *domain.PayloadMemoryQueried:
 		return *v
 	default:
 		return p

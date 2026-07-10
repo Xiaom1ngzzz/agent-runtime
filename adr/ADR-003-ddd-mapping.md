@@ -37,7 +37,7 @@
 | **CQRS(Command Query Responsibility Segregation)** | `State.Apply`(command 侧,写)与 `State.View`(query 侧,读)在接口层分离;ADR-002 明确 Fold/Project/Compile 是纯函数,Chat/Emit 有副作用——分开推理各自的可变性 | ch03 §3.5, ADR-002 |
 | **Repository** | `EventStore` / `SnapshotStore` / `SummaryStore` / `MemoryStore`(ch05)—— 都是"接口 + 可换实现",持有聚合的持久化职责,业务层不直接接触存储细节 | ch03 §3.4, §3.6, ch04 §4.10, ch05 |
 | **Domain Service** | `Compressor`(ch04 §4.5)—— 跨聚合协调 `State + Store + Summarizer`,行为不属于任一 Entity 或 Value Object;`PromptCompiler`(ch06)同理 | ch04 §4.5, ch06 |
-| **Anti-Corruption Layer(ACL)** | `Summarizer` trait 隔离 LLM 调用(把不确定性挡在 Compressor 边界);`PromptCompiler` 的 Provider Adapter 隔离 LLM 厂商差异(OpenAI/Anthropic/Bedrock 用同一个内部表达) | ch04 §4.5, ch06 §4.8 |
+| **Anti-Corruption Layer(ACL)** | `Summarizer` trait 隔离 LLM 调用(把不确定性挡在 Compressor 边界);`PromptCompiler` 的 Provider Adapter 隔离 LLM 厂商差异(OpenAI/Anthropic/Bedrock 用同一个内部表达) | ch04 §4.5, ch06 §6.6 |
 | **Snapshot Pattern** | `Snapshot` + `SnapshotStore`,Turn 边界拍照;ES 的经典优化手法,加速崩溃恢复 | ch03 §3.6 |
 
 ### 我们**没有**采用的 DDD 部分
