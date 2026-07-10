@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 
 	rtctx "agent-runtime-go/context"
 	"agent-runtime-go/domain"
@@ -46,6 +47,9 @@ func (s *EventStore) Append(events []domain.Event) error {
 		} else if events[i].Seq > s.seqBy[events[i].SessionID] {
 			// 允许客户端预填(如 ch01 sample 走另一条路),但要把计数器推到最新。
 			s.seqBy[events[i].SessionID] = events[i].Seq
+		}
+		if events[i].TS.IsZero() {
+			events[i].TS = time.Now().UTC()
 		}
 		s.events = append(s.events, events[i])
 	}
@@ -231,22 +235,35 @@ func applyOne(v *domain.SessionView, e domain.Event) {
 
 // ---------- ContextEngine ----------
 
-// ContextEngine 从当前 EventStore 的事件流里拼出 Messages。
-// 这是极简策略:把 UserSpoke、Assistant Message、ToolReturned 平铺进 Messages。
-// ch04 会讨论真正的裁剪/压缩策略。
+// ContextEngine 把 SessionView 投影成 Context。
+// ch02 极简策略:先读 Fold 后的 SessionView(生命周期),再只读 EventStore 展开消息原文。
+// ch04 LayeredContextEngine 用 WorkingSet 做有界展开;这里为 demo 平铺全量消息。
 type ContextEngine struct {
+	State *State
 	Store *EventStore
 	Tools []domain.Tool
 }
 
-func NewContextEngine(store *EventStore, tools []domain.Tool) *ContextEngine {
-	return &ContextEngine{Store: store, Tools: tools}
+func NewContextEngine(state *State, store *EventStore, tools []domain.Tool) *ContextEngine {
+	return &ContextEngine{State: state, Store: store, Tools: tools}
 }
 
 var _ rtctx.ContextEngine = (*ContextEngine)(nil)
 
 func (c *ContextEngine) Assemble(_ stdctx.Context, sessionID, taskID string) (domain.Context, error) {
-	events, _ := c.Store.Load(sessionID)
+	view, err := c.State.View(sessionID)
+	if err != nil {
+		return domain.Context{}, fmt.Errorf("state.View: %w", err)
+	}
+	if taskID != "" {
+		if _, ok := view.Tasks[taskID]; !ok {
+			return domain.Context{}, fmt.Errorf("task %s not in SessionView", taskID)
+		}
+	}
+	events, err := c.Store.Load(sessionID)
+	if err != nil {
+		return domain.Context{}, err
+	}
 	msgs := []domain.Message{{Role: "system", Content: "you are an agent."}}
 	for _, e := range events {
 		if e.TaskID != "" && e.TaskID != taskID {

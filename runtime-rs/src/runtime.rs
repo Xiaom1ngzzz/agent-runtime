@@ -53,6 +53,16 @@ impl Runtime {
             }
         }
 
+        let mut last_appended_id = String::new();
+        if let Ok(prior) = {
+            let store = self.event_store.lock().unwrap();
+            store.load(session_id)
+        } {
+            if let Some(last) = prior.last() {
+                last_appended_id = last.id.clone();
+            }
+        }
+
         let mut appended = Vec::new();
 
         // ---- Fold + Project ----
@@ -76,6 +86,7 @@ impl Runtime {
                 tools: ctx.tools.clone(),
             }),
             &mut appended,
+            &mut last_appended_id,
         )?;
         let resp = self.llm.chat(&msgs, &ctx.tools).map_err(|e| StepError(e.0))?;
         let tokens_in = resp.tokens_in;
@@ -92,6 +103,7 @@ impl Runtime {
                 tokens_out,
             }),
             &mut appended,
+            &mut last_appended_id,
         )?;
 
         // ---- Emit: Executor 处理工具调用 ----
@@ -109,7 +121,7 @@ impl Runtime {
                 e.session_id = session_id.into();
                 e.task_id = task_id.into();
                 e.turn_id = turn_id.into();
-                self.append_raw(e, &mut appended)?;
+                self.append_raw(e, &mut appended, &mut last_appended_id)?;
             }
         }
 
@@ -125,6 +137,7 @@ impl Runtime {
                 ..Default::default()
             }),
             &mut appended,
+            &mut last_appended_id,
         )?;
         Ok(appended)
     }
@@ -136,6 +149,7 @@ impl Runtime {
         turn: &str,
         payload: EventPayload,
         appended: &mut Vec<Event>,
+        last_appended_id: &mut String,
     ) -> Result<(), StepError> {
         let e = Event {
             id: String::new(),
@@ -147,11 +161,19 @@ impl Runtime {
             payload,
             seq: 0,
         };
-        self.append_raw(e, appended)
+        self.append_raw(e, appended, last_appended_id)
     }
 
-    fn append_raw(&self, e: Event, appended: &mut Vec<Event>) -> Result<(), StepError> {
-        // 用一个可变 buffer 让 EventStore 把 seq / id 写回到 buf[0]。
+    fn append_raw(
+        &self,
+        mut e: Event,
+        appended: &mut Vec<Event>,
+        last_appended_id: &mut String,
+    ) -> Result<(), StepError> {
+        if e.caused_by.is_empty() && !last_appended_id.is_empty() {
+            e.caused_by = last_appended_id.clone();
+        }
+        // 用一个可变 buffer 让 EventStore 把 seq / id / ts 写回到 buf[0]。
         let mut buf = [e];
         {
             let mut store = self.event_store.lock().unwrap();
@@ -162,6 +184,7 @@ impl Runtime {
             st.apply(&buf).map_err(|x| StepError(x.0))?;
         }
         let [ev] = buf;
+        *last_appended_id = ev.id.clone();
         appended.push(ev);
         Ok(())
     }

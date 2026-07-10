@@ -65,7 +65,7 @@ flowchart LR
 | 转换        | 类型签名                             | 责任                                                         |
 | ----------- | ------------------------------------ | ------------------------------------------------------------ |
 | **Fold**    | `[]Event → SessionView`              | 把追加式的事件流折叠成"当前状态"。State 层。                 |
-| **Project** | `SessionView → Context`              | 从状态投影出这次要发送的上下文。ContextEngine 层。           |
+| **Project** | `SessionView → Context`（可只读展开 EventStore 消息原文） | 从 Fold 后的状态投影出这次要发送的上下文。ContextEngine 层。           |
 | **Compile** | `Context → Messages`                 | 把结构化上下文编译成 LLM 认识的消息序列。PromptCompiler 层。 |
 | **Chat**    | `Messages → LLMResponse`             | 请求 LLM,得到响应。LLMProvider 层。                          |
 | **Emit**    | `LLMResponse + ToolResult → []Event` | 把响应与工具结果落回 Event 流。Executor 层。                 |
@@ -129,7 +129,7 @@ pub trait Executor {
 **契约的关键点**——不写清楚,后面会踩坑:
 
 1. **Fold 的输入必须是从会话起点开始的完整 Event 流**;或者从某个 Checkpoint 开始(ch09)。**中间截取一段就 Fold 是非法的**——因果链会断。
-2. **Project 只能读 SessionView,不能写 Event**;它是纯查询,没有副作用。
+2. **Project 以 SessionView 为主输入,不写 Event、不发外部请求**;生命周期判断只能来自 Fold,不能绕过 State。若需要 LLM 消息原文,可对 EventStore 做只读加载展开(见 ch03 §3.5.1、ch04 §4.4);它是纯查询,没有副作用。
 3. **Compile 的输入 `Context` 已经是"确定要发出去的消息"**,不做进一步的选择/过滤。这是 ContextEngine 的责任(见 §2.5)。
 4. **Chat 的输入 `Messages` 必须已经通过 Compile 校验过**——LLM Provider 不做二次验证。
 5. **Emit 的输出 `[]Event` 必须归属到当前 Turn**——所有事件的 `TurnID` 与传入的 `turn.ID` 一致。协调器会检查这一点。
@@ -210,8 +210,8 @@ impl Runtime {
 **为什么这样切分**:
 
 - **`Session.Open`、`Task.Create`、`Turn.Start`、`Task.End` 不在 Step 里**。这四个生命周期事件由调用方(应用/上层 loop)追加。Runtime 只负责"给定一个已经就绪的 Turn,把它跑完"。这条划分让 Runtime 可以被复用于"重放模式"(不发起新 Turn 只回放旧 Event)、"人机对话"、"批处理"等多种上下文。
-- **每一条 Event 都是 `Append + Apply` 两步一起做**——这保证 State 从来不会落后于 EventStore(见 §2.5 单向数据流)。协调器里的 `append()` 闭包封装了这个约束。
-- **Runtime 是无锁可重入的**——同一时间可以为不同 `(sessionID, taskID)` 并行调 Step,只要底层 EventStore/State 是并发安全的。
+- **每一条 Event 都是 `Append` 后立刻 `Apply`**——协调器里的 `append()` 闭包封装了这个顺序约束,保证 Step 内 State 不落后于 EventStore(见 §2.5)。生产实现应在同一 session 锁内完成(ch03 §3.4.4 方案 A);`memfakes` 为教学使用两把锁,逻辑上仍成对执行。
+- **Runtime 本身不持有会话锁**——同一时间可以为不同 `(sessionID, taskID)` 并行调 Step,只要底层 EventStore/State 实现并发安全(ch03 §3.4.2)。
 
 **放什么、不放什么**:
 

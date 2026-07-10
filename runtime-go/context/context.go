@@ -1,6 +1,6 @@
 // Package context 定义上下文引擎接口。
-// 上下文引擎负责：把 State 中相关的 Event 流投影成一次 Turn 需要的消息序列。
-// 实现见后续章节（ch04-context-engine.md）。
+// 上下文引擎负责:把 Fold 后的 SessionView 投影成一次 Turn 需要的 Context。
+// 实现可从 EventStore 只读展开消息原文(见 ADR-002、ch03 §3.5.1、ch04 §4.4)。
 package context
 
 import (

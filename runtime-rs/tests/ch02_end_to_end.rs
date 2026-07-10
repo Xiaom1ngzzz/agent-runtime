@@ -68,7 +68,7 @@ fn ch02_end_to_end_matches_ch01_totals() {
     let rt = Runtime {
         event_store: store.clone(),
         state: state.clone(),
-        context: Arc::new(ContextEngineFake::new(store.clone(), tool_descs)),
+        context: Arc::new(ContextEngineFake::new(state.clone(), store.clone(), tool_descs)),
         prompt: Arc::new(PromptCompilerPassthrough),
         llm: Arc::new(LLMScript::new(script)),
         executor: Arc::new(ExecutorFake::new(store.clone(), tools)),

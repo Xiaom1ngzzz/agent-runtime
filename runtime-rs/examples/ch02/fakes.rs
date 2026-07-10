@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use agent_runtime_rs::context::{ContextEngine, ContextError};
 use agent_runtime_rs::domain::{
@@ -50,6 +51,9 @@ impl EventStore for EventStoreFake {
                 e.seq = *entry;
             } else if e.seq > *entry {
                 *entry = e.seq;
+            }
+            if e.ts.is_none() {
+                e.ts = Some(SystemTime::now());
             }
             self.events.push(e.clone());
         }
@@ -215,19 +219,29 @@ fn apply_one(view: &mut SessionView, e: &Event) {
 // ---------- ContextEngine ----------
 
 pub struct ContextEngineFake {
+    state: Arc<Mutex<StateFake>>,
     store: Arc<Mutex<EventStoreFake>>,
     tools: Vec<Tool>,
 }
 
 impl ContextEngineFake {
-    pub fn new(store: Arc<Mutex<EventStoreFake>>, tools: Vec<Tool>) -> Self {
-        Self { store, tools }
+    pub fn new(state: Arc<Mutex<StateFake>>, store: Arc<Mutex<EventStoreFake>>, tools: Vec<Tool>) -> Self {
+        Self { state, store, tools }
     }
 }
 
 impl ContextEngine for ContextEngineFake {
     fn assemble(&self, session_id: &str, task_id: &str) -> Result<Context, ContextError> {
-        let events = self.store.lock().unwrap().snapshot();
+        let view = self
+            .state
+            .lock()
+            .unwrap()
+            .view(session_id)
+            .map_err(|e| ContextError(e.0))?;
+        if !task_id.is_empty() && !view.tasks.contains_key(task_id) {
+            return Err(ContextError(format!("task {task_id} not in SessionView")));
+        }
+        let events = self.store.lock().unwrap().load(session_id).map_err(|e| ContextError(e.0))?;
         let mut msgs = vec![Message {
             role: "system".into(),
             content: "you are an agent.".into(),

@@ -41,10 +41,11 @@ func TestCh02EndToEndMatchesCh01Totals(t *testing.T) {
 		},
 	}
 
+	st := memfakes.NewState()
 	rt := &runtime.Runtime{
 		EventStore: store,
-		State:      memfakes.NewState(),
-		Context:    memfakes.NewContextEngine(store, toolDescs),
+		State:      st,
+		Context:    memfakes.NewContextEngine(st, store, toolDescs),
 		Prompt:     memfakes.PromptCompiler{},
 		LLM:        memfakes.NewLLMProvider(script),
 		Executor:   memfakes.NewExecutor(store, tools),

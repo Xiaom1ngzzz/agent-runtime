@@ -31,7 +31,7 @@
 
 ## 里程碑
 
-- [x] **M1 Foundation**：Part I 完成 + ADR-001 落地。
+- [x] **M1 Foundation**：Part I 三章 + ADR-001/002/003 落地。
 - [x] **M2 Context**：Part II 完成，`runtime-go/context/` 与 `runtime-rs/src/context.rs` 均可运行 demo。（已收口：ch04–ch06 章节文字 + Go/Rust 参考实现全部落地，`mkdocs build --strict` 通过并已部署到 GitHub Pages）
 - [ ] **M3 Execution**：Part III 完成，端到端跑通一个最小 Agent。
 - [ ] **M4 Evolution**：Part IV 完成，配套评测框架。

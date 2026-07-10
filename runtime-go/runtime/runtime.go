@@ -16,7 +16,8 @@ import (
 )
 
 // Runtime 持有 6 个协作接口。
-// 生命周期由调用方管理:创建时注入依赖,之后 Step 是无锁可重入的。
+// 生命周期由调用方(上层 Loop)追加。协调器只负责"给定一个已就绪的 Turn,把它跑完"。
+// Step 内无跨 Turn 可变状态;并发安全依赖底层 EventStore/State 实现(ch03 §3.4.2)。
 type Runtime struct {
 	EventStore state.EventStore
 	State      state.State
@@ -35,8 +36,15 @@ type Runtime struct {
 // 重试策略是调用方或上层 Loop 的事。
 func (r *Runtime) Step(ctx stdctx.Context, sessionID, taskID, turnID string) ([]domain.Event, error) {
 	var appended []domain.Event
+	var lastAppendedID string
+	if prior, err := r.EventStore.Load(sessionID); err == nil && len(prior) > 0 {
+		lastAppendedID = prior[len(prior)-1].ID
+	}
 	append := func(e domain.Event) error {
 		e.SessionID, e.TaskID, e.TurnID = sessionID, taskID, turnID
+		if e.CausedBy == "" && lastAppendedID != "" {
+			e.CausedBy = lastAppendedID
+		}
 		// 用一个 1 元素切片让 EventStore.Append 的 seq/id 分配回写到 buf[0]。
 		buf := []domain.Event{e}
 		if err := r.EventStore.Append(buf); err != nil {
@@ -45,6 +53,7 @@ func (r *Runtime) Step(ctx stdctx.Context, sessionID, taskID, turnID string) ([]
 		if err := r.State.Apply(buf); err != nil {
 			return fmt.Errorf("apply event: %w", err)
 		}
+		lastAppendedID = buf[0].ID
 		appended = append_(appended, buf[0])
 		return nil
 	}

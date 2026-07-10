@@ -32,4 +32,4 @@
 - e07 由 e06 触发（LLM 决定调工具）
 - e13 由 e12 触发；e12 又能沿 e11→…→e02 追到源头
 
-对应实现见 `runtime/domain/ch01_sample.go`，回放测试见 `runtime/domain/ch01_sample_test.go`。
+对应实现见 `runtime-go/domain/ch01_sample.go`,回放测试见 `runtime-go/domain/ch01_sample_test.go`。

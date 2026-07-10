@@ -13,7 +13,9 @@ sequenceDiagram
     RT ->> ST: append(TaskCreated, TurnStarted)
 
     RT ->> CE: Assemble(session, task)
-    CE ->> ST: Load(session)
+    CE ->> ST: View(session)
+    ST -->> CE: SessionView
+    CE ->> ST: Load(session) [read-only, message expand]
     ST -->> CE: []Event
     CE -->> RT: domain.Context
 

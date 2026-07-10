@@ -1,5 +1,5 @@
 // ch02 · 端到端跑一次"查天气 + 发邮件":这次通过 Runtime.Step 生成事件,
-// 而不是像 ch01 那样手写。产出对齐 ch01 样本:19 条 Event、3 个 Turn、tokens_in=1830。
+// 而不是像 ch01 那样手写。产出对齐 ch01 样本:20 条 Event、3 个 Turn、tokens_in=1830。
 //
 // 运行:
 //   cd runtime-go && go run ./examples/ch02
@@ -53,10 +53,11 @@ func main() {
 		},
 	}
 
+	st := memfakes.NewState()
 	rt := &runtime.Runtime{
 		EventStore: store,
-		State:      memfakes.NewState(),
-		Context:    memfakes.NewContextEngine(store, toolDescs),
+		State:      st,
+		Context:    memfakes.NewContextEngine(st, store, toolDescs),
 		Prompt:     memfakes.PromptCompiler{},
 		LLM:        memfakes.NewLLMProvider(script),
 		Executor:   memfakes.NewExecutor(store, tools),

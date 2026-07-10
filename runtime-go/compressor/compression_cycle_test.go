@@ -54,7 +54,7 @@ func TestCh04CompressionCycle(t *testing.T) {
 	rt := &runtime.Runtime{
 		EventStore: store,
 		State:      st,
-		Context:    memfakes.NewContextEngine(store, toolDescs), // ch02 老 Assemble,供 Step 用
+		Context:    memfakes.NewContextEngine(st, store, toolDescs), // ch02 极简 Assemble,供 Step 用
 		Prompt:     memfakes.PromptCompiler{},
 		LLM:        memfakes.NewLLMProvider(script),
 		Executor:   memfakes.NewExecutor(store, tools),

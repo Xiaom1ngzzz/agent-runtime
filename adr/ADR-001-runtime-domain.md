@@ -1,6 +1,6 @@
 # ADR-001: Runtime 的边界与职责
 
-- **状态**: Proposed
+- **状态**: Accepted
 - **日期**: 2026-07-09
 - **决策者**: —
 
@@ -40,4 +40,5 @@ Agent Runtime 定义为：**接收任务、驱动一个或多个 Agent 完成任
 
 ## References
 
-- 章节 `ch01-runtime.md`
+- [ch01 Runtime Domain Model](../chapters/ch01-runtime-domain.md)
+- [ADR-003 Runtime 与 DDD 对应关系](ADR-003-ddd-mapping.md)

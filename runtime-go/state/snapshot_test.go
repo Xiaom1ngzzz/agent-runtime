@@ -153,10 +153,11 @@ func newRuntimeCh02Scenario() *runtime.Runtime {
 		},
 	}
 
+	st := memfakes.NewState()
 	return &runtime.Runtime{
 		EventStore: store,
-		State:      memfakes.NewState(),
-		Context:    memfakes.NewContextEngine(store, toolDescs),
+		State:      st,
+		Context:    memfakes.NewContextEngine(st, store, toolDescs),
 		Prompt:     memfakes.PromptCompiler{},
 		LLM:        memfakes.NewLLMProvider(script),
 		Executor:   memfakes.NewExecutor(store, tools),

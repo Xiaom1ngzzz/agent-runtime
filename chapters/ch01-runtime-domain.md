@@ -87,7 +87,7 @@ fn run(user_input: &str, tools: &[Tool]) -> Result<String, Error> {
 
 **本书选 B。** 第 3 章会展开 Event 的类型系统与实现,这里先接受一个约定:
 
-> Runtime 里唯一改变状态的方式是**追加一个 Event**。所有其它对象都是 Event 流的视图。
+> Runtime 里唯一改变状态的方式是**追加一个 Event**。所有其它对象都是 Event 流的视图。与 DDD / Event Sourcing 的词汇对应见 [ADR-003](../adr/ADR-003-ddd-mapping.md)。
 
 这个决策塑造了后面所有的名词:Session / Task / Turn 都不是"活的对象",它们是**在某个粒度上聚合 Event 得到的视图**。
 
@@ -369,7 +369,7 @@ erDiagram
 | ------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1. **崩溃**（进程被杀,`msgs` 丢）    | **Event** + Turn   | 每条 Event 追加到 EventStore 就落盘；重启后从最近的 Turn 边界 Checkpoint replay 到崩溃点,状态可重建。                                                    |
 | 2. **中断**（取消后副作用无法解释）   | **Task** + Event   | `Task.Status=canceled` 是取消的开关,通过 `ctx.Done()` 传到正在跑的 Turn；已经发生的副作用留在 `ToolCalled`/`ToolReturned` Event 里,UI 可查、可回滚。    |
-| 3. **并发**（多个 `msgs` 互相覆盖）   | **Session** + Task | Session 是权限与共享资源（钱包/日程/记忆）的归属边界；同一 Session 下的多个 Task 各自持有独立的 Event 流,写入靠 EventStore 的追加语义串行化。            |
+| 3. **并发**（多个 `msgs` 互相覆盖）   | **Session** + Task | Session 是权限与共享资源（钱包/日程/记忆）的归属边界；同一 Session **共享一条 append-only 事件流**,Task 级隔离靠 `task_id` 过滤与 Task 状态机,写入由 EventStore 串行化。            |
 | 4. **观测**（10 秒慢在哪不知道）      | **Turn** + Event   | Turn 天然是一个 Trace Span 的边界；Turn 内每条 Event 是子 Span,`LLMRequested→LLMReplied` 与 `ToolCalled→ToolReturned` 之间的时差直接给出分段耗时。       |
 | 5. **成本**（30K token 无处拦）       | **Turn** + Task    | Turn 记录 `TokensIn/TokensOut/CostUS`；Task 持有 `Budget`；ContextEngine 组装上下文时按 `Budget - Σ(Turn.cost)` 做预算控制,超预算直接拒绝。              |
 | 6. **回放**（生产 case 本地复现不了） | **Event**（全部）  | 把 Session 的 Event 流导出,本地 `State.Apply(events)` 就能拿到一模一样的 SessionView；再 `Executor.Run` 继续跑,复现到出问题的那个 Turn。                |
