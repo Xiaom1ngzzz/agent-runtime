@@ -113,6 +113,7 @@ Session  ──  一段用户与系统的关系
 **为什么需要**：它是外部世界看得到的最大单元。前端拿到的是 `sessionId`，账单按 Session 汇总，会话记忆挂在 Session 上，权限也按 Session 授予。
 
 **生命周期**：
+
 - 创建：用户开一个新对话；或系统按策略切分（例如"超过 24 小时无活动自动新起一个"）。
 - 存活期间：承载 0、1、多个 Task。
 - 结束：显式关闭 / 超时 / 被合并。
@@ -144,6 +145,7 @@ pub struct Session {
 ```
 
 **Session 不是什么**：
+
 - **不是"一个前端窗口"** —— 一个窗口可以切多个 Agent（多个 Session），一个 Session 也可以跨多个窗口继续。
 - **不是"上下文窗口"** —— 上下文是 Session 状态的一个投影，不等于 Session 本身。
 
@@ -152,6 +154,7 @@ pub struct Session {
 **是什么**：Session 里用户想做成的一件具体事情。
 
 **为什么单独一层**：
+
 - 一个 Session 里会说多件事："帮我订机票"、"顺便把上周的报销单发出去"——这是两个 Task。
 - Task 是**取消、重试、超时、预算**的自然单位。取消"订机票"不该误伤"发报销单"。
 - Task 是**成败评估**的自然单位。Session 无所谓成败，Task 有。
@@ -193,6 +196,7 @@ pub struct Task {
 **是什么**：Runtime 与 LLM 的**一次完整往返**——从"决定要 call LLM"到"这一轮所有工具调用都返回、状态更新完毕"。
 
 **为什么单独一层**：
+
 - 它是**成本记账**的自然粒度（每个 Turn 一次 LLM billing）。
 - 它是**观测**的自然粒度（一个 Turn 一个 Trace Span）。
 - 它是**重试**的自然粒度（LLM 超时 → 重试这个 Turn，不需要回退整个 Task）。
@@ -281,7 +285,7 @@ Rust 版没有单独的 `Type` 字段——EventType 的判别就是 `match payl
 
 **Payload 是类型化的**，不是 `map[string]any` / `serde_json::Value`。每种 `EventType` 对应一个具体的 Payload 结构，靠语言级机制收紧——编译器会拒绝把随便一个东西塞进 `Event.Payload`。两种语言的做法各有偏好：
 
-**Go：marker interface + Payload* struct**。完整定义见 [`runtime-go/domain/event_payloads.go`](../runtime-go/domain/event_payloads.go)。
+**Go：marker interface + Payload\* struct**。完整定义见 [`runtime-go/domain/event_payloads.go`](../runtime-go/domain/event_payloads.go)。
 
 ```go
 type EventPayload interface {
@@ -341,12 +345,12 @@ erDiagram
 
 三层聚合 + 一层原子事实。每层解决一类问题：
 
-| 层次 | 解决的问题 |
-|---|---|
+| 层次    | 解决的问题                       |
+| ------- | -------------------------------- |
 | Session | 身份、权限、账单、会话记忆的归属 |
-| Task    | 目标、取消/重试、预算、成功与否 |
+| Task    | 目标、取消/重试、预算、成功与否  |
 | Turn    | LLM 计费、Trace Span、Checkpoint |
-| Event   | 事实、回放、审计、恢复 |
+| Event   | 事实、回放、审计、恢复           |
 
 如果把某一层去掉：
 
@@ -359,15 +363,15 @@ erDiagram
 
 §1.1 那 7 件砸下来的事，逐条对应到 §1.3 的四层对象上：
 
-| §1.1 痛点 | 主要靠哪一层解决 | 具体机制 |
-|---|---|---|
-| 1. **崩溃**（进程被杀，`msgs` 丢） | **Event** + Turn | 每条 Event 追加到 EventStore 就落盘；重启后从最近的 Turn 边界 Checkpoint replay 到崩溃点，状态可重建。 |
-| 2. **中断**（取消后副作用无法解释） | **Task** + Event | `Task.Status=canceled` 是取消的开关，通过 `ctx.Done()` 传到正在跑的 Turn；已经发生的副作用留在 `ToolCalled`/`ToolReturned` Event 里，UI 可查、可回滚。 |
-| 3. **并发**（多个 `msgs` 互相覆盖） | **Session** + Task | Session 是权限与共享资源（钱包/日程/记忆）的归属边界；同一 Session 下的多个 Task 各自持有独立的 Event 流，写入靠 EventStore 的追加语义串行化。 |
-| 4. **观测**（10 秒慢在哪不知道） | **Turn** + Event | Turn 天然是一个 Trace Span 的边界；Turn 内每条 Event 是子 Span，`LLMRequested→LLMReplied` 与 `ToolCalled→ToolReturned` 之间的时差直接给出分段耗时。 |
-| 5. **成本**（30K token 无处拦） | **Turn** + Task | Turn 记录 `TokensIn/TokensOut/CostUS`；Task 持有 `Budget`；ContextEngine 组装上下文时按 `Budget - Σ(Turn.cost)` 做预算控制，超预算直接拒绝。 |
-| 6. **回放**（生产 case 本地复现不了） | **Event**（全部） | 把 Session 的 Event 流导出，本地 `State.Apply(events)` 就能拿到一模一样的 SessionView；再 `Executor.Run` 继续跑，复现到出问题的那个 Turn。 |
-| 7. **审计**（谁授权发的邮件） | **Event** + Task | `ToolCalled{name=send_email}` 沿 `CausedBy` 链一路追回到 `UserSpoke`；Task 提供业务视角的分组（哪个"意图"下发的邮件），Session 提供身份维度（谁的授权）。 |
+| §1.1 痛点                             | 主要靠哪一层解决   | 具体机制                                                                                                                                                  |
+| ------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. **崩溃**（进程被杀，`msgs` 丢）    | **Event** + Turn   | 每条 Event 追加到 EventStore 就落盘；重启后从最近的 Turn 边界 Checkpoint replay 到崩溃点，状态可重建。                                                    |
+| 2. **中断**（取消后副作用无法解释）   | **Task** + Event   | `Task.Status=canceled` 是取消的开关，通过 `ctx.Done()` 传到正在跑的 Turn；已经发生的副作用留在 `ToolCalled`/`ToolReturned` Event 里，UI 可查、可回滚。    |
+| 3. **并发**（多个 `msgs` 互相覆盖）   | **Session** + Task | Session 是权限与共享资源（钱包/日程/记忆）的归属边界；同一 Session 下的多个 Task 各自持有独立的 Event 流，写入靠 EventStore 的追加语义串行化。            |
+| 4. **观测**（10 秒慢在哪不知道）      | **Turn** + Event   | Turn 天然是一个 Trace Span 的边界；Turn 内每条 Event 是子 Span，`LLMRequested→LLMReplied` 与 `ToolCalled→ToolReturned` 之间的时差直接给出分段耗时。       |
+| 5. **成本**（30K token 无处拦）       | **Turn** + Task    | Turn 记录 `TokensIn/TokensOut/CostUS`；Task 持有 `Budget`；ContextEngine 组装上下文时按 `Budget - Σ(Turn.cost)` 做预算控制，超预算直接拒绝。              |
+| 6. **回放**（生产 case 本地复现不了） | **Event**（全部）  | 把 Session 的 Event 流导出，本地 `State.Apply(events)` 就能拿到一模一样的 SessionView；再 `Executor.Run` 继续跑，复现到出问题的那个 Turn。                |
+| 7. **审计**（谁授权发的邮件）         | **Event** + Task   | `ToolCalled{name=send_email}` 沿 `CausedBy` 链一路追回到 `UserSpoke`；Task 提供业务视角的分组（哪个"意图"下发的邮件），Session 提供身份维度（谁的授权）。 |
 
 **读法**：竖着看每一列 → 每层对象的**存在理由**。横着看每一行 → 一个真实痛点被"哪几个字段"接住。全书后面每一章都在把这张表里的某一格从"概念"变成"能跑的实现"。
 
@@ -538,20 +542,20 @@ cd runtime-rs && cargo test ch01_sample_replay
 
 样本共 **19 条 Event、3 个 Turn、1 个 Task**：
 
-| # | Type | Turn | 关键 payload |
-|---|---|---|---|
-| e01 | SessionOpened     | –  | principal=user-42 |
-| e02 | UserSpoke         | –  | "查天气 + 发邮件" |
-| e03 | TaskCreated       | –  | goal, budget={maxTokens:8000} |
-| e04 | TurnStarted       | r1 | index=0 |
-| e05 | LLMRequested      | r1 | model=claude-opus-4-7 |
-| e06 | LLMReplied        | r1 | tool_calls=[weather], tokens=520/48 |
-| e07 | ToolCalled        | r1 | name=weather, city=北京 |
-| e08 | ToolReturned      | r1 | {temp:26, sky:多云} |
-| e09 | TurnEnded         | r1 | tokens_in=520 |
-| e10–e15 | Turn 2       | r2 | 发邮件；tool=send_email, ok:true |
-| e16–e18 | Turn 3       | r3 | 收尾自然语言，无 tool_calls |
-| e19 | TaskEnded         | –  | status=succeeded |
+| #       | Type          | Turn | 关键 payload                        |
+| ------- | ------------- | ---- | ----------------------------------- |
+| e01     | SessionOpened | –    | principal=user-42                   |
+| e02     | UserSpoke     | –    | "查天气 + 发邮件"                   |
+| e03     | TaskCreated   | –    | goal, budget={maxTokens:8000}       |
+| e04     | TurnStarted   | r1   | index=0                             |
+| e05     | LLMRequested  | r1   | model=claude-opus-4-7               |
+| e06     | LLMReplied    | r1   | tool_calls=[weather], tokens=520/48 |
+| e07     | ToolCalled    | r1   | name=weather, city=北京             |
+| e08     | ToolReturned  | r1   | {temp:26, sky:多云}                 |
+| e09     | TurnEnded     | r1   | tokens_in=520                       |
+| e10–e15 | Turn 2        | r2   | 发邮件；tool=send_email, ok:true    |
+| e16–e18 | Turn 3        | r3   | 收尾自然语言，无 tool_calls         |
+| e19     | TaskEnded     | –    | status=succeeded                    |
 
 完整定义在 [`runtime-go/domain/ch01_sample.go`](../runtime-go/domain/ch01_sample.go) 与 [`runtime-rs/examples/ch01/sample.rs`](../runtime-rs/examples/ch01/sample.rs)，逐条明细见 [`runtime-go/domain/testdata/ch01-sample.md`](../runtime-go/domain/testdata/ch01-sample.md)。
 
@@ -615,17 +619,17 @@ Go 的 marker interface 与 Rust 的封闭 enum（见 §1.3）都需要一张 `E
 
 业界有几种流行的命名，各自有历史包袱。团队里若已在用其它词，照下表映射即可。
 
-| 来源 | 该词 | 对应本书 | 本书为何不采用 |
-|---|---|---|---|
-| OpenAI Assistants API | **Thread**   | Session | "Thread" 与 OS 线程强重名,读中英文代码时都会歧义 |
-| OpenAI Assistants API | **Run**      | Task    | Run 强绑定一次"Assistant 执行";本书 Task 更抽象,不预设绑哪个 Agent。中文也没有稳定对应词 |
-| OpenAI Assistants API | **Step**     | 近似 Turn | Step 粒度过细,不覆盖"工具调用回填后的状态更新"这段 |
-| LangGraph             | **State**    | Event 流的折叠结果 | LangGraph 是对象优先,State 可变;本书事件优先,把 State 视作派生视图（第 3、9 章会展开转换） |
-| LangGraph             | **Checkpoint** | 快照 + Turn 边界 | 命名接近,机制放在第 9 章讨论 |
-| AutoGen               | **GroupChat**  | 无对等物 | AutoGen 偏"多 Agent 协作";本书 Task 层不感知 Agent 数量,多 Agent 是 Executor 内部细节 |
-| Anthropic Agent SDK   | **Session / Task** | 直接一致 | 本书在其之下再切 Turn/Event,为计费和观测服务 |
-| 通用软件              | **Conversation** | Session + Context | 词义太宽,同时指"聊天记录"和"上下文";本书拆成两个精确的词 |
-| 消息中间件            | **Message**   | Event   | Message 无因果链、无归属聚合;Event 强制 `CausedBy` 与 `session/task/turn` 归属 |
+| 来源                  | 该词               | 对应本书           | 本书为何不采用                                                                             |
+| --------------------- | ------------------ | ------------------ | ------------------------------------------------------------------------------------------ |
+| OpenAI Assistants API | **Thread**         | Session            | "Thread" 与 OS 线程强重名,读中英文代码时都会歧义                                           |
+| OpenAI Assistants API | **Run**            | Task               | Run 强绑定一次"Assistant 执行";本书 Task 更抽象,不预设绑哪个 Agent。中文也没有稳定对应词   |
+| OpenAI Assistants API | **Step**           | 近似 Turn          | Step 粒度过细,不覆盖"工具调用回填后的状态更新"这段                                         |
+| LangGraph             | **State**          | Event 流的折叠结果 | LangGraph 是对象优先,State 可变;本书事件优先,把 State 视作派生视图（第 3、9 章会展开转换） |
+| LangGraph             | **Checkpoint**     | 快照 + Turn 边界   | 命名接近,机制放在第 9 章讨论                                                               |
+| AutoGen               | **GroupChat**      | 无对等物           | AutoGen 偏"多 Agent 协作";本书 Task 层不感知 Agent 数量,多 Agent 是 Executor 内部细节      |
+| Anthropic Agent SDK   | **Session / Task** | 直接一致           | 本书在其之下再切 Turn/Event,为计费和观测服务                                               |
+| 通用软件              | **Conversation**   | Session + Context  | 词义太宽,同时指"聊天记录"和"上下文";本书拆成两个精确的词                                   |
+| 消息中间件            | **Message**        | Event              | Message 无因果链、无归属聚合;Event 强制 `CausedBy` 与 `session/task/turn` 归属             |
 
 **结论**：本书采用 **Session / Task / Turn / Event** 四层命名，是在"业界习惯"与"精确性"之间的折中。已经在用 Thread / Run / State 的团队不需要重命名,把上表当术语字典就够。
 
@@ -652,14 +656,14 @@ Go 的 marker interface 与 Rust 的封闭 enum（见 §1.3）都需要一张 `E
 
 ## 1.9 取舍记录
 
-| 决策 | 选择 | 代价 | 什么情况下会被推翻 |
-|---|---|---|---|
-| 建模方式 | 事件优先 | 写代码时要克制就地修改;每次状态变化多一次 append | 生产上 Event 存储的写放大成本压过收益(极高频、极短寿命的会话),会退回"对象优先 + 定期落盘"混合模式。触发 ADR-XX。 |
-| 对象层数 | 四层(Session/Task/Turn/Event) | 简单 demo 觉得冗余;新人上手曲线更陡 | 上层需求收敛到"单任务、单会话"(例如只做批量转录),Task 层可退化为标签;若走向"复杂 DAG 编排",还会再加一层 Job/Workflow(ch07 会讨论)。 |
-| Task 是否嵌套 | 本章按扁平处理 | 复杂工作流(子任务、并行分支)暂不支持 | 一旦 Executor 引入 Task Graph(ch07),此约束解除。届时 Task 会加 `parent_id`,取消 / 预算继承规则通过新 ADR 定义。 |
-| Turn 边界 | LLM 响应 + 由此触发的所有工具全部返回 | 单个 Turn 时长可能被慢工具拉长,影响观测粒度 | 若引入长流式工具(如后台任务、Human-in-the-loop),Turn 可能被切成"submit / resume"两段。参见 ch09 Checkpoint。 |
-| 命名 | Session/Task/Turn/Event | 与 OpenAI 的 Thread/Run/Step 不一致 | 若行业出现事实标准命名(例如 OpenTelemetry 定义了 Agent Trace 规范),会在保留内部术语的同时补一层对外映射,不推翻。 |
-| Payload 类型化 | Go marker interface / Rust 封闭 enum | 新增 EventType 需要加样板 | 若某类 payload 变化极快(例如工具协议每周变),会给该子集单独开一个 `PayloadDynamic{ Kind string; Body json.RawMessage }` 逃生舱,但仅限该子集。 |
+| 决策           | 选择                                  | 代价                                             | 什么情况下会被推翻                                                                                                                           |
+| -------------- | ------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 建模方式       | 事件优先                              | 写代码时要克制就地修改;每次状态变化多一次 append | 生产上 Event 存储的写放大成本压过收益(极高频、极短寿命的会话),会退回"对象优先 + 定期落盘"混合模式。触发 ADR-XX。                             |
+| 对象层数       | 四层(Session/Task/Turn/Event)         | 简单 demo 觉得冗余;新人上手曲线更陡              | 上层需求收敛到"单任务、单会话"(例如只做批量转录),Task 层可退化为标签;若走向"复杂 DAG 编排",还会再加一层 Job/Workflow(ch07 会讨论)。          |
+| Task 是否嵌套  | 本章按扁平处理                        | 复杂工作流(子任务、并行分支)暂不支持             | 一旦 Executor 引入 Task Graph(ch07),此约束解除。届时 Task 会加 `parent_id`,取消 / 预算继承规则通过新 ADR 定义。                              |
+| Turn 边界      | LLM 响应 + 由此触发的所有工具全部返回 | 单个 Turn 时长可能被慢工具拉长,影响观测粒度      | 若引入长流式工具(如后台任务、Human-in-the-loop),Turn 可能被切成"submit / resume"两段。参见 ch09 Checkpoint。                                 |
+| 命名           | Session/Task/Turn/Event               | 与 OpenAI 的 Thread/Run/Step 不一致              | 若行业出现事实标准命名(例如 OpenTelemetry 定义了 Agent Trace 规范),会在保留内部术语的同时补一层对外映射,不推翻。                             |
+| Payload 类型化 | Go marker interface / Rust 封闭 enum  | 新增 EventType 需要加样板                        | 若某类 payload 变化极快(例如工具协议每周变),会给该子集单独开一个 `PayloadDynamic{ Kind string; Body json.RawMessage }` 逃生舱,但仅限该子集。 |
 
 **读法**：右侧"什么情况下会被推翻"不是免责声明,是**未来任一条决策变更必须先说服自己"这一条命中了没有"**。修订会记录为新的 ADR,ADR-001 会随之被 Superseded。
 
@@ -684,7 +688,7 @@ Go 的 marker interface 与 Rust 的封闭 enum（见 §1.3）都需要一张 `E
 - 参考实现（Rust）：[`runtime-rs/src/domain.rs`](../runtime-rs/src/domain.rs)、[`runtime-rs/src/context.rs`](../runtime-rs/src/context.rs)、[`runtime-rs/src/state.rs`](../runtime-rs/src/state.rs)
 - 图源：[`diagrams/ch01-object-model.mmd`](../diagrams/ch01-object-model.mmd)、[`diagrams/ch01-turn-sequence.mmd`](../diagrams/ch01-turn-sequence.mmd)
 - 相关章节：`ch02-runtime-dataflow.md`、`ch03-state-event.md`、`ch07-planner.md`
-- Michael Nygard, *Documenting Architecture Decisions* (2011)
-- Martin Fowler, *Event Sourcing* (2005)
+- Michael Nygard, _Documenting Architecture Decisions_ (2011)
+- Martin Fowler, _Event Sourcing_ (2005)
 - OpenAI Assistants API — Threads, Runs, Steps
 - LangGraph — StateGraph & Checkpointer

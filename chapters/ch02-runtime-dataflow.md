@@ -62,13 +62,13 @@ flowchart LR
 
 把上图抽出来,一次 Turn 的数据从头到尾经过 **4 种转换 + 1 个外部调用**:
 
-| 转换 | 类型签名 | 责任 |
-|---|---|---|
-| **Fold**    | `[]Event → SessionView`             | 把追加式的事件流折叠成"当前状态"。State 层。 |
-| **Project** | `SessionView → Context`             | 从状态投影出这次要发送的上下文。ContextEngine 层。 |
-| **Compile** | `Context → Messages`                | 把结构化上下文编译成 LLM 认识的消息序列。PromptCompiler 层。 |
-| **Chat**    | `Messages → LLMResponse`            | 请求 LLM,得到响应。LLMProvider 层。 |
-| **Emit**    | `LLMResponse + ToolResult → []Event` | 把响应与工具结果落回 Event 流。Executor 层。 |
+| 转换        | 类型签名                             | 责任                                                         |
+| ----------- | ------------------------------------ | ------------------------------------------------------------ |
+| **Fold**    | `[]Event → SessionView`              | 把追加式的事件流折叠成"当前状态"。State 层。                 |
+| **Project** | `SessionView → Context`              | 从状态投影出这次要发送的上下文。ContextEngine 层。           |
+| **Compile** | `Context → Messages`                 | 把结构化上下文编译成 LLM 认识的消息序列。PromptCompiler 层。 |
+| **Chat**    | `Messages → LLMResponse`             | 请求 LLM,得到响应。LLMProvider 层。                          |
+| **Emit**    | `LLMResponse + ToolResult → []Event` | 把响应与工具结果落回 Event 流。Executor 层。                 |
 
 其中 **Fold / Project / Compile 是纯函数**——同样输入必然同样输出,没有副作用。这是能"回放、快照、并发读"的前提。**Chat / Emit 有副作用**(网络调用 / 工具副作用)。这条边界不是修辞,是设计约束——违反它就丧失第 1 章 §1.1 的"回放"痛点解法(见 §2.5)。
 
@@ -213,6 +213,7 @@ impl Runtime {
 - **Runtime 是无锁可重入的**——同一时间可以为不同 `(sessionID, taskID)` 并行调 Step,只要底层 EventStore/State 是并发安全的。
 
 **放什么、不放什么**:
+
 - 重试策略、限流、Budget 检查——**都不放**在 `Step` 里,放上层 Loop。理由:一个 Step 是"一次跑到底"的语义,失败就返回错误,让调用方决定下一步。
 - Streaming、并行工具、Human-in-the-loop——**这一版本不支持**。ch08 Executor 会把 Step 拆成"submit + resume"两半来承载这些场景。
 
@@ -222,13 +223,13 @@ impl Runtime {
 
 §2.2 那张图上所有箭头都有明确方向。**下游写上游 = 违反数据流协议**,后果:
 
-| 违反 | 症状 | 谁会踩到 |
-|---|---|---|
-| Project 写 Event | Context 变成"活对象",两次 Assemble 结果不一样 | 缓存/幂等/并发全崩 |
-| Compile 读 State | Prompt 不再是 Context 的纯函数 | 回放失败,Prompt 每次不同 |
-| LLM 感知 State  | LLM 请求变成"隐式带状态",Provider 不可替换 | 换模型/换 Provider 时行为漂移 |
-| Executor 改 Context | 工具执行产生"看不见的"上下文变化 | ch04 上下文压缩后行为改变 |
-| Fold 有副作用 | 折叠不再幂等,重放会重发副作用 | ch09 Checkpoint 失效 |
+| 违反                | 症状                                          | 谁会踩到                      |
+| ------------------- | --------------------------------------------- | ----------------------------- |
+| Project 写 Event    | Context 变成"活对象",两次 Assemble 结果不一样 | 缓存/幂等/并发全崩            |
+| Compile 读 State    | Prompt 不再是 Context 的纯函数                | 回放失败,Prompt 每次不同      |
+| LLM 感知 State      | LLM 请求变成"隐式带状态",Provider 不可替换    | 换模型/换 Provider 时行为漂移 |
+| Executor 改 Context | 工具执行产生"看不见的"上下文变化              | ch04 上下文压缩后行为改变     |
+| Fold 有副作用       | 折叠不再幂等,重放会重发副作用                 | ch09 Checkpoint 失效          |
 
 **具体例子:一个编译过但错的实现**
 
@@ -298,13 +299,13 @@ flowchart TB
 
 数据流的每一段都可能失败。ch01 §1.1 的"崩溃 / 中断"痛点在这里落成**具体的失败策略**:
 
-| 段 | 失败原因(典型) | 策略 | 落到 Event | 是否终止 Turn |
-|---|---|---|---|---|
-| **Fold**    | Event 流损坏 / 反序列化失败 | **拒绝服务**——不猜、不跳过。 | `TaskEnded{status=failed, reason="fold: ..."}` | 是 |
-| **Project** | 引用了不存在的 taskID / 状态视图缺字段 | 记录 Event,降级到"最小 Context"(只带 system + 最近一条 UserSpoke) | `ContextCompressed{strategy="fallback:minimal"}` | 否,继续跑 |
-| **Compile** | Messages 长度超模型窗口 / 类型不对 | 记录 Event,拒绝本 Turn 的 LLM 调用 | `TurnEnded{status=failed, reason="compile: ..."}` | 是 |
-| **Chat**    | 网络超时 / 429 / 5xx | 上层 Loop 有限重试(3 次,指数退避);全部失败后 emit `TurnFailed` | `TurnEnded{status=failed, reason="llm: ..."}` | 是 |
-| **Emit**    | 工具超时 / 副作用一半成功 | 每个 `ToolReturned` 用 `IsError=true` 记录;LLM 下一 Turn 决定重试/告诉用户 | `ToolReturned{is_error=true}` | 否,交给下一 Turn |
+| 段          | 失败原因(典型)                         | 策略                                                                       | 落到 Event                                        | 是否终止 Turn    |
+| ----------- | -------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------- | ---------------- |
+| **Fold**    | Event 流损坏 / 反序列化失败            | **拒绝服务**——不猜、不跳过。                                               | `TaskEnded{status=failed, reason="fold: ..."}`    | 是               |
+| **Project** | 引用了不存在的 taskID / 状态视图缺字段 | 记录 Event,降级到"最小 Context"(只带 system + 最近一条 UserSpoke)          | `ContextCompressed{strategy="fallback:minimal"}`  | 否,继续跑        |
+| **Compile** | Messages 长度超模型窗口 / 类型不对     | 记录 Event,拒绝本 Turn 的 LLM 调用                                         | `TurnEnded{status=failed, reason="compile: ..."}` | 是               |
+| **Chat**    | 网络超时 / 429 / 5xx                   | 上层 Loop 有限重试(3 次,指数退避);全部失败后 emit `TurnFailed`             | `TurnEnded{status=failed, reason="llm: ..."}`     | 是               |
+| **Emit**    | 工具超时 / 副作用一半成功              | 每个 `ToolReturned` 用 `IsError=true` 记录;LLM 下一 Turn 决定重试/告诉用户 | `ToolReturned{is_error=true}`                     | 否,交给下一 Turn |
 
 **关键选择**:
 
@@ -372,14 +373,14 @@ cargo test ch02
 
 ## 2.9 取舍记录
 
-| 决策 | 选择 | 代价 | 什么情况下会被推翻 |
-|---|---|---|---|
-| 谁持有依赖 | 显式 `Runtime` 结构体聚合 6 个接口 | 依赖注入代码变啰嗦;换实现要动 `Runtime{}` 字面量 | 走向"多 Agent 编排"时会升级为 `ExecutorPool` + `Runtime` 池,详见 ch08 |
-| 生命周期事件谁追加 | Session/Task/Turn 的 Start/End 由调用方追加,Step 不管 | 应用侧要写 append 样板 | 若引入统一的 `Session.Run(task)` 门面,会把这层样板收进 Runtime 内部 |
-| Append 与 Apply 顺序 | 每条 Event **先 Append 再 Apply,同一函数内完成** | 单条 Event 要两次锁 | 追求极端吞吐时,可能改成"批量 Append + 批量 Apply",但要证明因果一致性没破 |
-| Fold/Project/Compile 是否纯函数 | 是——不允许副作用 | ContextEngine 里不能"顺便"发外部请求;所有 IO 都必须走 Tool | 若引入"懒加载向量库"这种真正需要的副作用,加 ADR 开逃生舱,但只对该子集破例 |
-| 重试策略在哪 | 上层 Loop,Step 只跑一遍 | 简单 demo 要多写一个 Loop | 若 Runtime 需要"内建 Auto-Retry" API,加一个 `AutoRetryOption`,不改 `Step` 语义 |
-| 观测代码在哪 | 本章不写 OTel,只声明 span 边界 | 想直接用得等 ch10 | 若某个 span 边界发现挂不上必要 attribute,先动 §2.3 契约,不动观测层 |
+| 决策                            | 选择                                                  | 代价                                                       | 什么情况下会被推翻                                                             |
+| ------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 谁持有依赖                      | 显式 `Runtime` 结构体聚合 6 个接口                    | 依赖注入代码变啰嗦;换实现要动 `Runtime{}` 字面量           | 走向"多 Agent 编排"时会升级为 `ExecutorPool` + `Runtime` 池,详见 ch08          |
+| 生命周期事件谁追加              | Session/Task/Turn 的 Start/End 由调用方追加,Step 不管 | 应用侧要写 append 样板                                     | 若引入统一的 `Session.Run(task)` 门面,会把这层样板收进 Runtime 内部            |
+| Append 与 Apply 顺序            | 每条 Event **先 Append 再 Apply,同一函数内完成**      | 单条 Event 要两次锁                                        | 追求极端吞吐时,可能改成"批量 Append + 批量 Apply",但要证明因果一致性没破       |
+| Fold/Project/Compile 是否纯函数 | 是——不允许副作用                                      | ContextEngine 里不能"顺便"发外部请求;所有 IO 都必须走 Tool | 若引入"懒加载向量库"这种真正需要的副作用,加 ADR 开逃生舱,但只对该子集破例      |
+| 重试策略在哪                    | 上层 Loop,Step 只跑一遍                               | 简单 demo 要多写一个 Loop                                  | 若 Runtime 需要"内建 Auto-Retry" API,加一个 `AutoRetryOption`,不改 `Step` 语义 |
+| 观测代码在哪                    | 本章不写 OTel,只声明 span 边界                        | 想直接用得等 ch10                                          | 若某个 span 边界发现挂不上必要 attribute,先动 §2.3 契约,不动观测层             |
 
 ---
 
@@ -399,10 +400,10 @@ cargo test ch02
 - [ADR-001 · Runtime 的边界与职责](../adr/ADR-001-runtime-domain.md)
 - [ADR-002 · Runtime 数据流协议](../adr/ADR-002-dataflow-protocol.md)——本章的正式协议沉淀
 - 参考实现:
-  - Go: [`runtime-go/runtime/runtime.go`](../runtime-go/runtime/runtime.go)、[`runtime-go/runtime/memfakes/memfakes.go`](../runtime-go/runtime/memfakes/memfakes.go)
-  - Rust: [`runtime-rs/src/runtime.rs`](../runtime-rs/src/runtime.rs)
+    - Go: [`runtime-go/runtime/runtime.go`](../runtime-go/runtime/runtime.go)、[`runtime-go/runtime/memfakes/memfakes.go`](../runtime-go/runtime/memfakes/memfakes.go)
+    - Rust: [`runtime-rs/src/runtime.rs`](../runtime-rs/src/runtime.rs)
 - 端到端 demo:
-  - Go: [`runtime-go/examples/ch02/main.go`](../runtime-go/examples/ch02/main.go)
-  - Rust: [`runtime-rs/examples/ch02/main.rs`](../runtime-rs/examples/ch02/main.rs)
+    - Go: [`runtime-go/examples/ch02/main.go`](../runtime-go/examples/ch02/main.go)
+    - Rust: [`runtime-rs/examples/ch02/main.rs`](../runtime-rs/examples/ch02/main.rs)
 - 图源: [`diagrams/ch02-dataflow.mmd`](../diagrams/ch02-dataflow.mmd)、[`diagrams/ch02-tracing.mmd`](../diagrams/ch02-tracing.mmd)
 - 相关章节:`ch01-runtime-domain.md`、`ch03-state-event.md`、`ch04-context-engine.md`、`ch08-executor.md`、`ch10-observability.md`
