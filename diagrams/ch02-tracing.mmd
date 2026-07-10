@@ -1,0 +1,26 @@
+flowchart TB
+    T["<b>Turn span</b><br/>taskID=t1 turnID=r1<br/>attrs: session, task, turn_index"]
+
+    subgraph inner["Turn 内部的 5 段"]
+        direction TB
+        FP["Fold + Project<br/>ContextEngine.Assemble<br/>attrs: context_msg_count, dropped, strategy"]
+        C["Compile<br/>PromptCompiler.Compile<br/>attrs: prompt_tokens_est"]
+        H["Chat<br/>LLMProvider.Chat<br/>attrs: model, tokens_in, tokens_out, cost_usd, latency_ms"]
+        E["Emit<br/>Executor.Run<br/>attrs: tool_call_count"]
+
+        subgraph tools["每个工具一个子 span"]
+            direction LR
+            T1["Tool(weather)<br/>attrs: duration_ms, status"]
+            T2["Tool(send_email)<br/>attrs: duration_ms, status"]
+        end
+
+        FP --> C
+        C --> H
+        H --> E
+        E --> tools
+    end
+
+    T --> inner
+
+    classDef span fill:#eef,stroke:#446,color:#000
+    class T,FP,C,H,E,T1,T2 span

@@ -1,18 +1,30 @@
-# Agent Runtime Book
+# Agent Runtime
 
-A book/repository for designing and documenting an Agent Runtime — the layer between an LLM and a running agent system.
+Building an Agent Runtime from First Principles —— 一本关于 Agent 运行时设计与实现的书,配套 Go / Rust 两份参考实现。
+
+在线阅读: <https://xiaom1ngzzz.github.io/agent-runtime/>
 
 ## Structure
 
-- `BOOK.md` — book goals and writing principles.
-- `STYLE_GUIDE.md` — writing conventions.
-- `ROADMAP.md` — the full outline and progress.
-- `adr/` — Architecture Decision Records.
-- `chapters/` — book chapters.
-- `runtime-go/` — reference runtime in Go (`domain/`, `context/`, `state/`, ...). `go build ./...`.
-- `runtime-rs/` — reference runtime in Rust, feature-matched to the Go version. `cargo build`.
-- `diagrams/` — architecture and sequence diagrams (source + rendered).
+- `BOOK.md` — 目标与写作原则。
+- `STYLE_GUIDE.md` — 写作约定。
+- `ROADMAP.md` — 全书大纲与进度。
+- `chapters/` — 章节正文。
+- `adr/` — Architecture Decision Records。
+- `runtime-go/` — Go 参考实现(`domain/`、`context/`、`state/` …)。`go build ./...`。
+- `runtime-rs/` — Rust 参考实现,与 Go 逐字段对齐。`cargo build`。
+- `diagrams/` — 架构与时序图源文件。
+- `docs/` — MkDocs 站点入口(符号链接,不修改)。
 
 ## How to read
 
-Start from `BOOK.md`, then `ROADMAP.md`, then chapters in order.
+从 `BOOK.md` 开始,然后 `ROADMAP.md`,再按章节顺序读。
+
+## Local preview of the site
+
+```bash
+pip install --user mkdocs-material
+mkdocs serve
+```
+
+浏览器访问 <http://127.0.0.1:8000>。

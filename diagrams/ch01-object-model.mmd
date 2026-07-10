@@ -1,0 +1,33 @@
+erDiagram
+    SESSION ||--o{ TASK  : contains
+    TASK    ||--o{ TURN  : contains
+    TURN    ||--o{ EVENT : emits
+
+    SESSION {
+      string id
+      string principal
+      timestamp createdAt
+      timestamp lastActiveAt
+    }
+    TASK {
+      string id
+      string sessionId
+      string goal
+      string status
+      json   budget
+    }
+    TURN {
+      string id
+      string taskId
+      int    index
+      int    tokensIn
+      int    tokensOut
+      float  costUsd
+    }
+    EVENT {
+      string id
+      string type
+      json   payload
+      string causedBy
+      timestamp ts
+    }

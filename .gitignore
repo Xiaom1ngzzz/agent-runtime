@@ -5,9 +5,28 @@
 /runtime-go/**/*.test
 /runtime-go/**/*.out
 
+# Go binaries & shared libs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Go workspace files
+go.work
+go.work.sum
+
 # Rust build output
 /runtime-rs/target/
 /runtime-rs/Cargo.toml.bak
+
+# env file
+.env
 
 # Editor / OS
 .DS_Store

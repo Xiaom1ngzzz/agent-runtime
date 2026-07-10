@@ -1,0 +1,23 @@
+flowchart LR
+    subgraph turn["一次 Turn 的数据流(Fold → Project → Compile → LLM → Emit)"]
+        direction LR
+        ES[(EventStore)]
+        ST[[State]]
+        CE[[ContextEngine]]
+        PC[[PromptCompiler]]
+        L[[LLMProvider]]
+        EX[[Executor]]
+        T[(Tool Runtime)]
+
+        ES -- "&#91;&#93;Event" --> ST
+        ST -- "SessionView (Fold)" --> CE
+        CE -- "Context (Project)" --> PC
+        PC -- "Messages (Compile)" --> L
+        L -- "LLMResponse" --> EX
+        EX -- "ToolCall" --> T
+        T -- "ToolResult" --> EX
+        EX -- "&#91;&#93;Event (Emit)" --> ES
+    end
+
+    U([User Input<br/>UserSpoke]) --> ES
+    EX -. "&#91;&#93;Event 再折叠为下一 Turn 的 SessionView" .-> ST

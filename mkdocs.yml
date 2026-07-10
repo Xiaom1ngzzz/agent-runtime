@@ -1,0 +1,93 @@
+site_name: Agent Runtime
+site_description: Building an Agent Runtime from First Principles
+site_url: https://xiaom1ngzzz.github.io/agent-runtime/
+repo_url: https://github.com/Xiaom1ngzzz/agent-runtime
+repo_name: Xiaom1ngzzz/agent-runtime
+edit_uri: edit/master/
+
+# docs/ 里全部是指向仓库真实内容的符号链接,让原文里的 ../adr/../chapters/ 相对链接继续能走通。
+docs_dir: docs
+# 构建产物目录;.gitignore 会排除。
+site_dir: site
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - tables
+  - footnotes
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search:
+      lang:
+        - zh
+        - en
+
+nav:
+  - 首页: index.md
+  - 关于本书:
+      - 目标与写作原则: BOOK.md
+      - 路线图: ROADMAP.md
+      - 风格指南: STYLE_GUIDE.md
+  - Part I · Foundation:
+      - Ch01 · Runtime Domain Model: chapters/ch01-runtime-domain.md
+      - Ch02 · Runtime Data Flow: chapters/ch02-runtime-dataflow.md
+      - Ch03 · State & Event Model: chapters/ch03-state-event.md
+  - Architecture Decisions:
+      - ADR 模板: adr/ADR-000.md
+      - ADR-001 · Runtime 边界与职责: adr/ADR-001-runtime-domain.md
+      - ADR-002 · Runtime 数据流协议: adr/ADR-002-dataflow-protocol.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Xiaom1ngzzz/agent-runtime

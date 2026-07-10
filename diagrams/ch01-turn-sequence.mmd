@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    participant U  as User
+    participant RT as Runtime
+    participant CE as ContextEngine
+    participant PC as PromptCompiler
+    participant L  as LLMProvider
+    participant EX as Executor
+    participant T  as Tool
+    participant ST as State / EventStore
+
+    U ->> RT: UserSpoke("查天气 + 发邮件")
+    RT ->> ST: append(TaskCreated, TurnStarted)
+
+    RT ->> CE: Assemble(session, task)
+    CE ->> ST: Load(session)
+    ST -->> CE: []Event
+    CE -->> RT: domain.Context
+
+    RT ->> PC: Compile(context)
+    PC -->> RT: Messages
+
+    RT ->> L: Chat(messages, tools)
+    L -->> RT: LLMResponse{tool_calls:[weather]}
+    RT ->> ST: append(LLMRequested, LLMReplied)
+
+    RT ->> EX: Run(turn)
+    EX ->> T: weather(city=北京, date=明天)
+    T -->> EX: {temp:26, sky:多云}
+    EX -->> RT: []Event{ToolCalled, ToolReturned}
+    RT ->> ST: append(events)
+    RT ->> ST: append(TurnEnded)
+
+    note over RT,ST: Turn 2 会再走一遍上面的流程<br/>直到 LLM 不再请求工具，Task 结束
