@@ -9,6 +9,7 @@
 - [x] `chapters/ch03-state-event.md` —— State & Event Model
 - [x] `adr/ADR-001-runtime-domain.md` —— Runtime 的边界与职责
 - [x] `adr/ADR-002-dataflow-protocol.md` —— Runtime 数据流协议
+- [x] `adr/ADR-003-ddd-mapping.md` —— Runtime 与 DDD 对应关系
 
 ## Part II — Context System（上下文系统）
 
