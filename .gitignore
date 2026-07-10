@@ -1,0 +1,21 @@
+# MkDocs build output
+/site/
+
+# Go build cache & test binaries
+/runtime-go/**/*.test
+/runtime-go/**/*.out
+
+# Rust build output
+/runtime-rs/target/
+/runtime-rs/Cargo.toml.bak
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Python venv for local mkdocs preview
+.venv/
+__pycache__/
