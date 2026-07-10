@@ -19,3 +19,4 @@ pub mod wire;
 
 pub mod compressor;
 pub mod layered;
+pub mod memory;
