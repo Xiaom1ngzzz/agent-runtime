@@ -12,7 +12,7 @@
 
 ## Part II — Context System（上下文系统）
 
-- [ ] `chapters/ch04-context-engine.md` —— Context Engine
+- [x] `chapters/ch04-context-engine.md` —— Context Engine（文字，代码 Round 2 落地）
 - [ ] `chapters/ch05-memory.md` —— Memory Architecture
 - [ ] `chapters/ch06-prompt-compiler.md` —— Prompt Compiler
 - [ ] `runtime-go/context/` & `runtime-rs/src/context.rs` —— 上下文引擎参考实现

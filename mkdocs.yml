@@ -82,6 +82,8 @@ nav:
       - Ch01 · Runtime Domain Model: chapters/ch01-runtime-domain.md
       - Ch02 · Runtime Data Flow: chapters/ch02-runtime-dataflow.md
       - Ch03 · State & Event Model: chapters/ch03-state-event.md
+  - Part II · Context System:
+      - Ch04 · Context Engine: chapters/ch04-context-engine.md
   - Architecture Decisions:
       - ADR 模板: adr/ADR-000.md
       - ADR-001 · Runtime 边界与职责: adr/ADR-001-runtime-domain.md
