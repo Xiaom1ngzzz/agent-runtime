@@ -59,6 +59,8 @@ ch03 §3.4.4 的 Outbox / Subscribe 仍标为扩展。Round 2 基线保持方案
 
 ## 9.4 API
 
+**Go**
+
 ```go
 type CheckpointStore interface {
     Latest(sessionID string) (Checkpoint, bool, error)
@@ -69,7 +71,29 @@ func TakeCheckpoint(sessionID string, st State, cps CheckpointStore) error
 func Recover(sessionID string, cps CheckpointStore, store EventStore, st RecoverableState) (replayed int, err error)
 ```
 
-Rust 对齐:`take_checkpoint` / `recover`。两端内存 Store 都保存完整 `Checkpoint`,不会在读回时把旧版本伪装成当前版本。
+**Rust**
+
+```rust
+pub trait CheckpointStore {
+    fn latest(&self, session_id: &str) -> Result<Option<Checkpoint>, StateError>;
+    fn save(&mut self, session_id: &str, cp: Checkpoint) -> Result<(), StateError>;
+}
+
+pub fn take_checkpoint(
+    session_id: &str,
+    state: &dyn State,
+    cps: &mut dyn CheckpointStore,
+) -> Result<(), StateError>;
+
+pub fn recover(
+    session_id: &str,
+    cps: &dyn CheckpointStore,
+    store: &dyn EventStore,
+    state: &mut dyn RecoverableState,
+) -> Result<usize, StateError>;
+```
+
+两端内存 Store 都保存完整 `Checkpoint`,不会在读回时把旧版本伪装成当前版本。
 
 ---
 

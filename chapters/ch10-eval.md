@@ -26,9 +26,18 @@ Eval **不要求**逐字节相等(时间戳、Event ID 会变)。当前比较器
 | ToolCalls / ToolErrors | 按 CallID 去重后的工具健康度 |
 | TokensIn/Out | 同时保留 golden、actual 与 delta;当前不进入 Passed 门禁 |
 
+**Go**
+
 ```go
 score := eval.CompareStreams(golden, actual, taskID)
 // Passed 要求结构、终态、工具调用数和工具错误数与 golden 一致
+```
+
+**Rust**
+
+```rust
+let score = compare_streams(&golden, &actual, task_id);
+// passed 要求结构、终态、工具调用数和工具错误数与 golden 一致
 ```
 
 未知工具会同时产生 `ToolBindFailed` 与错误 `ToolReturned`;两者属于同一个 CallID,只计一次失败。缺失目标 Task 或缺失终态必须失败,Go/Rust 语义一致。

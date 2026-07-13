@@ -33,10 +33,22 @@ Executor 只负责 **Emit**:
 
 ### 8.3.1 Registry
 
+**Go**
+
 ```go
 type Registry struct { /* name → ToolFunc + domain.Tool */ }
 func (r *Registry) Register(desc domain.Tool, fn ToolFunc)
 func (r *Registry) Descriptions() []domain.Tool  // 喂给 ContextEngine
+```
+
+**Rust**
+
+```rust
+pub struct Registry { /* name → ToolFn + Tool */ }
+impl Registry {
+    pub fn register(&self, desc: Tool, fn_: ToolFn);
+    pub fn descriptions(&self) -> Vec<Tool>; // 喂给 ContextEngine
+}
 ```
 
 一份注册表同时服务 Project(工具 schema)与 Emit(实现)。
@@ -51,6 +63,8 @@ Round 2 参考实现仅覆盖"未知工具 → BindFailed";schema 校验与输�
 
 ### 8.3.2 ToolExecutor
 
+**Go**
+
 ```go
 type ToolExecutor struct {
     Store     state.EventStore
@@ -61,10 +75,29 @@ type ToolExecutor struct {
 }
 ```
 
+**Rust**
+
+```rust
+pub struct ToolExecutor<S: SnapshotStore> {
+    pub store: Arc<Mutex<S>>,
+    pub registry: Arc<Registry>,
+    pub timeout: Option<Duration>, // 单工具;None = 不额外超时
+}
+// Rust 参考实现当前为同步顺序调用;Parallel 留扩展
+```
+
 ### 8.3.3 `ToolBindFailed`
+
+**Go**
 
 ```go
 EvtToolBindFailed / PayloadToolBindFailed{CallID, Name, Reason}
+```
+
+**Rust**
+
+```rust
+// EVT_TOOL_BIND_FAILED / PayloadToolBindFailed { call_id, name, reason }
 ```
 
 仍追加 `ToolReturned{IsError}`,保证消息序列对 LLM 合法(role=tool 有对应 call)。
