@@ -1,8 +1,8 @@
 //! ch10 Eval —— 与 Go `eval/ch10_eval_test.go` 对齐。
 
 use agent_runtime_rs::domain::{
-    Event, EventPayload, PayloadTaskCreated, PayloadTaskEnded, PayloadToolCalled,
-    PayloadToolReturned, TaskStatus,
+    Event, EventPayload, PayloadProgressUpdated, PayloadTaskCreated, PayloadTaskEnded,
+    PayloadToolCalled, PayloadToolReturned, TaskStatus,
 };
 use agent_runtime_rs::eval::compare_streams;
 
@@ -74,4 +74,19 @@ fn ch10_compare_streams() {
     }
     let s2 = compare_streams(&golden, &bad, "t1");
     assert!(!s2.passed);
+
+    let mut replaced = golden.clone();
+    replaced[1].payload = EventPayload::ProgressUpdated(PayloadProgressUpdated {
+        task_id: "t1".into(),
+        ..Default::default()
+    });
+    replaced[2].payload = EventPayload::ProgressUpdated(PayloadProgressUpdated {
+        task_id: "t1".into(),
+        ..Default::default()
+    });
+    let s3 = compare_streams(&golden, &replaced, "t1");
+    assert!(!s3.passed);
+    assert!(!s3.event_sequence_match);
+
+    assert!(!compare_streams(&[], &[], "t1").passed);
 }

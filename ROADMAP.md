@@ -24,17 +24,17 @@
 - [x] `chapters/ch08-executor.md` —— 执行器
 - [x] `chapters/ch09-checkpoint.md` —— 检查点与恢复
 - [x] `adr/ADR-004-task-graph-saga.md` —— 任务图与 Saga
-- [x] `runtime-go/{planner,executor,state}/` & `runtime-rs/src/{planner,executor,state}/` —— 规划 / 执行 / Checkpoint 参考实现
+- [x] `runtime-go/{planner,executor,state}/` & `runtime-rs/src/{planner,executor,state}/` —— 规划 / 执行 / Checkpoint 参考实现（Rust Executor 当前为同步顺序基线）
 - [x] `runtime-go/examples/m3/` —— M3 最小 Agent 端到端
 
 ## 第四部分 — 演进
 
 - [x] `chapters/ch10-eval.md` —— 评测与优化
-- [x] `runtime-go/eval/` & `runtime-rs/src/eval/` —— 最小评测框架
+- [x] `runtime-go/eval/` & `runtime-rs/src/eval/` —— 确定性协议比较与恢复冒烟框架
 
 ## 里程碑
 
 - [x] **M1 基础**：第一部分 三章 + ADR-001/002/003 落地。
 - [x] **M2 上下文**：第二部分 完成，Go/Rust 的 Compression Cycle、Memory Cycle、Provider Diff 测试可运行。（已收口：ch04–ch06 章节文字 + Round 2 最小闭环；生产扩展项在各章“实现状态”中标注）
-- [x] **M3 执行**：第三部分 完成，端到端跑通一个最小 Agent（Planner → Executor → Checkpoint → Eval）。
-- [x] **M4 演进**：第四部分 完成，配套评测框架（`CompareStreams` / Score）。
+- [x] **M3 执行**：第三部分参考路径完成，Go 端到端跑通最小 Agent（Planner → Executor → Checkpoint → Eval 冒烟）；持久化 submit/resume 与跨进程 Checkpoint wire 留作生产扩展。
+- [x] **M4 演进**：第四部分确定性协议比较器完成（`CompareStreams` / Score）；随机质量评测、统计门禁与真实 golden suite 留作生产扩展。

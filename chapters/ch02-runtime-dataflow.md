@@ -290,9 +290,9 @@ flowchart TB
 
 1. **Span 边界 = 契约边界**。每段转换的输入输出都是可枚举的类型(§2.3),Span 的 `start/end` 与"契约进入/退出"一一对应,不用猜。
 2. **能直接回答"慢在哪"**——Chat span 的耗时是模型往返,Emit span 的耗时是工具执行,Fold+Project 的耗时是折叠成本。§2.1 那句"HTTP 200 一条日志"的困境消失。
-3. **Attribute 天然对齐**。Chat span 挂 `tokens_in / tokens_out / cost`;Emit span 每个工具挂 `tool_name / duration / status`。ch10(Evaluation & Optimization)会把这套 Attribute 定成规范,并映射到 OTel Semantic Conventions——评测与观测共用同一套指标。
+3. **Attribute 可以对齐**。Chat span 可挂 `tokens_in / tokens_out / cost`;Emit span 每个工具可挂 `tool_name / duration / status`。ch10 的最小 Eval 会复用其中部分概念,但本轮不定义 OTel Semantic Conventions 映射。
 
-本章不写 OTel 集成代码——集成随 ch10 的评测框架一起落地。这里的规则是:**新加任何观测点前,先问"它是哪根箭头上"**。找不到对应箭头,说明观测点选错了,或者你在偷偷加箭头(违反 §2.5)。
+本章不写 OTel 集成代码;版本化属性规范与 SDK 集成属于生产扩展。这里的规则是:**新加任何观测点前,先问"它是哪根箭头上"**。找不到对应箭头,说明观测点选错了,或者你在偷偷加箭头(违反 §2.5)。
 
 ---
 

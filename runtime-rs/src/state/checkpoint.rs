@@ -1,6 +1,8 @@
 //! Checkpoint 与恢复 —— 与 `runtime-go/state/checkpoint.go` 对齐。见 ch09。
 
-use super::{EventStore, Snapshot, SnapshotStore, State, StateError};
+use std::collections::HashMap;
+
+use super::{EventStore, Snapshot, State, StateError};
 use crate::domain::SessionView;
 
 pub const CHECKPOINT_SCHEMA_VERSION: i32 = 1;
@@ -17,13 +19,13 @@ pub trait CheckpointStore {
 }
 
 pub struct MemCheckpointStore {
-    inner: super::MemSnapshotStore,
+    checkpoints: HashMap<String, Checkpoint>,
 }
 
 impl MemCheckpointStore {
     pub fn new() -> Self {
         Self {
-            inner: super::MemSnapshotStore::new(),
+            checkpoints: HashMap::new(),
         }
     }
 }
@@ -36,17 +38,15 @@ impl Default for MemCheckpointStore {
 
 impl CheckpointStore for MemCheckpointStore {
     fn latest(&self, session_id: &str) -> Result<Option<Checkpoint>, StateError> {
-        Ok(self.inner.latest(session_id)?.map(|snapshot| Checkpoint {
-            schema_version: CHECKPOINT_SCHEMA_VERSION,
-            snapshot,
-        }))
+        Ok(self.checkpoints.get(session_id).cloned())
     }
 
     fn save(&mut self, session_id: &str, mut cp: Checkpoint) -> Result<(), StateError> {
         if cp.schema_version == 0 {
             cp.schema_version = CHECKPOINT_SCHEMA_VERSION;
         }
-        self.inner.save(session_id, cp.snapshot)
+        self.checkpoints.insert(session_id.into(), cp);
+        Ok(())
     }
 }
 

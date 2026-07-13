@@ -6,6 +6,7 @@ package state
 
 import (
 	"fmt"
+	"sync"
 
 	"agent-runtime-go/domain"
 )
@@ -24,28 +25,36 @@ type CheckpointStore interface {
 	Save(sessionID string, cp Checkpoint) error
 }
 
-// MemCheckpointStore 包装 MemSnapshotStore。
+// MemCheckpointStore 直接保存完整 Checkpoint,确保 SchemaVersion 不会在读回时丢失。
 type MemCheckpointStore struct {
-	snaps *MemSnapshotStore
+	mu          sync.Mutex
+	checkpoints map[string]Checkpoint
 }
 
 func NewMemCheckpointStore() *MemCheckpointStore {
-	return &MemCheckpointStore{snaps: NewMemSnapshotStore()}
+	return &MemCheckpointStore{checkpoints: map[string]Checkpoint{}}
 }
 
 func (s *MemCheckpointStore) Latest(sessionID string) (Checkpoint, bool, error) {
-	snap, ok, err := s.snaps.Latest(sessionID)
-	if err != nil || !ok {
-		return Checkpoint{}, ok, err
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cp, ok := s.checkpoints[sessionID]
+	if !ok {
+		return Checkpoint{}, false, nil
 	}
-	return Checkpoint{SchemaVersion: CheckpointSchemaVersion, Snapshot: snap}, true, nil
+	cp.Snapshot = cloneSnap(cp.Snapshot)
+	return cp, true, nil
 }
 
 func (s *MemCheckpointStore) Save(sessionID string, cp Checkpoint) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if cp.SchemaVersion == 0 {
 		cp.SchemaVersion = CheckpointSchemaVersion
 	}
-	return s.snaps.Save(sessionID, cp.Snapshot)
+	cp.Snapshot = cloneSnap(cp.Snapshot)
+	s.checkpoints[sessionID] = cp
+	return nil
 }
 
 // RecoverableState 是恢复所需的最小 State 能力。

@@ -3,6 +3,7 @@ package planner
 import (
 	stdcontext "context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"agent-runtime-go/domain"
@@ -58,12 +59,20 @@ func (p *GraphPlanner) Plan(_ stdcontext.Context, view domain.SessionView, taskI
 	children := g.ChildrenOf(taskID)
 
 	goals := SplitGoals(task.Goal)
-	if len(goals) >= 2 && len(children) == 0 {
-		return p.spawnChildren(task, goals), nil
+	if len(goals) >= 2 {
+		if len(children) == 0 {
+			return p.spawnChildren(task, goals), nil
+		}
+		if repairs := p.repairPendingChildren(task, goals, view); len(repairs) > 0 {
+			return repairs, nil
+		}
 	}
 
 	if p.Trigger != nil && p.Trigger.ShouldUpdate(view, taskID, nil) {
 		prog := BuildProgressFromView(view, taskID)
+		if prev, ok := view.Progresses[taskID]; ok && progressContentEqual(prev, prog) {
+			return nil, nil
+		}
 		return []domain.Event{{
 			Type:   domain.EvtProgressUpdated,
 			TaskID: taskID,
@@ -76,17 +85,52 @@ func (p *GraphPlanner) Plan(_ stdcontext.Context, view domain.SessionView, taskI
 	return nil, nil
 }
 
+// repairPendingChildren 补齐规划事件列表只追加了一部分时的缺口。
+func (p *GraphPlanner) repairPendingChildren(parent domain.Task, goals []string, view domain.SessionView) []domain.Event {
+	var out []domain.Event
+	for i, goal := range goals {
+		childID := p.ChildIDFn(parent.ID, i)
+		child, ok := view.Tasks[childID]
+		if !ok {
+			childBudget := distributedBudget(parent.Budget, len(goals), i)
+			out = append(out,
+				domain.Event{
+					Type:   domain.EvtSubTaskSpawned,
+					TaskID: parent.ID,
+					Payload: domain.PayloadSubTaskSpawned{
+						ParentTaskID: parent.ID, ChildTaskID: childID, Goal: goal, Budget: childBudget,
+					},
+				},
+				domain.Event{
+					Type:   domain.EvtTaskCreated,
+					TaskID: childID,
+					Payload: domain.PayloadTaskCreated{
+						Goal: goal, Budget: childBudget, ParentID: parent.ID,
+					},
+				},
+			)
+			continue
+		}
+		if child.Status != domain.TaskPending {
+			continue
+		}
+		out = append(out, domain.Event{
+			Type:   domain.EvtTaskCreated,
+			TaskID: childID,
+			Payload: domain.PayloadTaskCreated{
+				Goal: goal, Budget: child.Budget, ParentID: parent.ID,
+			},
+		})
+	}
+	return out
+}
+
 func (p *GraphPlanner) spawnChildren(parent domain.Task, goals []string) []domain.Event {
 	n := len(goals)
-	share := parent.Budget.MaxTokens / n
-	if share < 1 && parent.Budget.MaxTokens > 0 {
-		share = 1
-	}
 	out := make([]domain.Event, 0, n*2)
 	for i, goal := range goals {
 		childID := p.ChildIDFn(parent.ID, i)
-		childBudget := parent.Budget
-		childBudget.MaxTokens = share
+		childBudget := distributedBudget(parent.Budget, n, i)
 		out = append(out,
 			domain.Event{
 				Type:   domain.EvtSubTaskSpawned,
@@ -110,6 +154,24 @@ func (p *GraphPlanner) spawnChildren(parent domain.Task, goals []string) []domai
 		)
 	}
 	return out
+}
+
+func distributedBudget(parent domain.Budget, childCount, index int) domain.Budget {
+	out := parent
+	out.MaxTokens = 0
+	if parent.MaxTokens > 0 && childCount > 0 {
+		out.MaxTokens = parent.MaxTokens / childCount
+		if index < parent.MaxTokens%childCount {
+			out.MaxTokens++
+		}
+	}
+	return out
+}
+
+func progressContentEqual(a, b domain.Progress) bool {
+	a.Version, b.Version = 0, 0
+	a.UpdatedAt, b.UpdatedAt = "", ""
+	return reflect.DeepEqual(a, b)
 }
 
 // BuildProgressFromView 根据子 Task 状态与已有 Progress 拼一张图。
@@ -217,8 +279,8 @@ func (SagaCoordinator) OnChildEnded(view domain.SessionView, parentID string) ([
 		reason = "one or more children failed"
 	}
 	return []domain.Event{{
-		Type:   domain.EvtTaskEnded,
-		TaskID: parentID,
+		Type:    domain.EvtTaskEnded,
+		TaskID:  parentID,
 		Payload: domain.PayloadTaskEnded{Status: status, Reason: reason},
 	}}, nil
 }

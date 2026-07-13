@@ -11,7 +11,8 @@ import (
 )
 
 // Snapshot 是"折叠到 Seq 为止的 View"的镜像。
-// 恢复流程:View = latestSnapshot.View, 再 replay EventStore.LoadFrom(sessionID, Seq+1)。
+// 恢复流程:View = latestSnapshot.View, 再 replay EventStore.LoadFrom(sessionID, Seq);
+// LoadFrom 的契约是返回 seq > fromSeq 的事件。
 type Snapshot struct {
 	Seq  int64
 	View domain.SessionView
@@ -38,7 +39,10 @@ func (s *MemSnapshotStore) Latest(sessionID string) (Snapshot, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	snap, ok := s.snaps[sessionID]
-	return snap, ok, nil
+	if !ok {
+		return Snapshot{}, false, nil
+	}
+	return cloneSnap(snap), true, nil
 }
 
 func (s *MemSnapshotStore) Save(sessionID string, snap Snapshot) error {
@@ -53,6 +57,12 @@ func (s *MemSnapshotStore) Save(sessionID string, snap Snapshot) error {
 func cloneSnap(snap Snapshot) Snapshot {
 	out := Snapshot{Seq: snap.Seq}
 	out.View.Session = snap.View.Session
+	if snap.View.Session.Metadata != nil {
+		out.View.Session.Metadata = make(map[string]string, len(snap.View.Session.Metadata))
+		for k, v := range snap.View.Session.Metadata {
+			out.View.Session.Metadata[k] = v
+		}
+	}
 	out.View.MaxSeq = snap.View.MaxSeq
 	out.View.Tasks = make(map[string]domain.Task, len(snap.View.Tasks))
 	for k, v := range snap.View.Tasks {
@@ -72,7 +82,7 @@ func cloneSnap(snap Snapshot) Snapshot {
 	if snap.View.Summaries != nil {
 		out.View.Summaries = make(map[int64]domain.Summary, len(snap.View.Summaries))
 		for k, v := range snap.View.Summaries {
-			out.View.Summaries[k] = v
+			out.View.Summaries[k] = cloneSummary(v)
 		}
 	}
 	if snap.View.MemoryRefs != nil {
@@ -81,8 +91,56 @@ func cloneSnap(snap Snapshot) Snapshot {
 	if snap.View.Progresses != nil {
 		out.View.Progresses = make(map[string]domain.Progress, len(snap.View.Progresses))
 		for k, v := range snap.View.Progresses {
-			out.View.Progresses[k] = v
+			out.View.Progresses[k] = cloneProgress(v)
 		}
 	}
 	return out
+}
+
+func cloneSummary(in domain.Summary) domain.Summary {
+	out := in
+	out.UserIntents = append([]string(nil), in.UserIntents...)
+	out.DecisionsMade = append([]domain.Decision(nil), in.DecisionsMade...)
+	out.OpenQuestions = append([]string(nil), in.OpenQuestions...)
+	out.NextActions = append([]string(nil), in.NextActions...)
+	if in.ToolResults != nil {
+		out.ToolResults = make(map[string]any, len(in.ToolResults))
+		for k, v := range in.ToolResults {
+			out.ToolResults[k] = cloneAny(v)
+		}
+	}
+	return out
+}
+
+func cloneProgress(in domain.Progress) domain.Progress {
+	out := in
+	out.Done = append([]domain.Step(nil), in.Done...)
+	out.Next = append([]domain.Step(nil), in.Next...)
+	if in.Open != nil {
+		out.Open = make([]domain.OpenLoop, len(in.Open))
+		for i, loop := range in.Open {
+			out.Open[i] = loop
+			out.Open[i].BlockingSteps = append([]int(nil), loop.BlockingSteps...)
+		}
+	}
+	return out
+}
+
+func cloneAny(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(x))
+		for k, item := range x {
+			out[k] = cloneAny(item)
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i, item := range x {
+			out[i] = cloneAny(item)
+		}
+		return out
+	default:
+		return v
+	}
 }

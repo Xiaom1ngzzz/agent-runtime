@@ -15,6 +15,8 @@ ch01 §1.9 把 Task 按扁平处理。demo 里 Goal 写 `"查天气 + 发邮件"
 
 **需要一张图,而不是一串 Turn。**
 
+本章先建立表达与汇合能力;细粒度取消 API、级联规则和子 Task 并行调度尚未实现。
+
 ---
 
 ## 7.2 概念:任务图 + 规划器 + Saga
@@ -57,7 +59,7 @@ type Task struct {
 
 ### 7.3.2 `SubTaskSpawned`
 
-Planner 的意图事件。Round 2 里 `GraphPlanner` 同时产出 `SubTaskSpawned` + `TaskCreated{ParentID}`,便于审计"谁决定拆分"。
+Planner 的意图事件。Round 2 里 `GraphPlanner` 同时产出 `SubTaskSpawned` + `TaskCreated{ParentID}`,便于审计"谁决定拆分"。参考 Fold 会先为 Spawn 建 pending 占位;若规划 Event 列表只追加了一部分就崩溃,下一次 Plan 会补发缺失的 `TaskCreated` 或尚未创建的兄弟子任务。
 
 ### 7.3.3 `BuildTaskGraph`
 
@@ -66,6 +68,8 @@ g := domain.BuildTaskGraph(view.Tasks)
 g.Roots              // ParentID == ""
 g.ChildrenOf("t1")   // 直接子节点
 ```
+
+`Roots` 与 `Children` 都按 Task ID 稳定排序。当前模型没有显式创建序号,因此不能把 map/HashMap 遍历顺序解释为创建顺序。
 
 ---
 
@@ -81,7 +85,7 @@ type Planner interface {
 
 1. Planner **只读** View,返回待 Append 的 Event——不碰 EventStore。
 2. 幂等优先:已有子 Task 时不再重复 spawn。
-3. 预算继承:子 Task 均分父 `MaxTokens`(Round 2 简化规则)。
+3. 预算继承:子 Task 按商和余数分配父 `MaxTokens`,总和不超过父预算;父预算小于子任务数时允许部分子任务得到 0。
 
 **Go 参考实现** `planner.GraphPlanner`:Goal 含 `" + "` 则拆分子目标;否则尝试 `ProgressUpdated`。
 
@@ -108,6 +112,7 @@ ch04 §4.7.6 把触发器留到本章。Round 2 策略:
 
 - 尚无 Progress → 生成一版;
 - 已有子图 → 按子 Task 状态填 `Done` / `Next`。
+- 语义内容未变化 → 不发新 Event,避免仅因重复 Plan 提升 Version。
 
 触发仍由上层 Loop 在 Plan 时机调用,不塞进 `Runtime.Step`。
 
@@ -127,7 +132,7 @@ cd runtime-go && go test ./planner -run TestCh07 -v
 cd runtime-rs && cargo test ch07_task_graph
 ```
 
-断言:拆出 2 子 Task、ParentID/预算正确、Saga 关父、Progress.Done=2。
+断言:拆出 2 子 Task、ParentID/预算正确、子预算不超父预算、Saga 关父、Progress.Done=2,以及相同状态重复 Plan 不追加 Progress。
 
 ---
 
@@ -156,6 +161,6 @@ cd runtime-rs && cargo test ch07_task_graph
 
 - [ADR-004 · 任务图与 Saga](../adr/ADR-004-task-graph-saga.md)
 - [ADR-003 · DDD 对应](../adr/ADR-003-ddd-mapping.md)
-- Go: [`runtime-go/planner/`](../runtime-go/planner/)
-- Rust: [`runtime-rs/src/planner/`](../runtime-rs/src/planner/)
+- Go: [`runtime-go/planner/graph.go`](../runtime-go/planner/graph.go)
+- Rust: [`runtime-rs/src/planner/mod.rs`](../runtime-rs/src/planner/mod.rs)
 - 相关:`ch01`(扁平 Task)、`ch04`(Progress)、`ch08`(Executor)

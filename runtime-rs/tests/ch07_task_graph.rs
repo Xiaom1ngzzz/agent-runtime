@@ -118,6 +118,70 @@ fn ch07_task_graph_plan() {
         prog[0].payload,
         EventPayload::ProgressUpdated(ref p) if p.progress.done.len() == 2
     ));
+    for event in prog {
+        append(&mut store, &mut state, sid, event);
+    }
+    let view = state.view(sid).unwrap();
+    assert!(planner.plan(&view, parent).unwrap().is_empty());
+}
+
+#[test]
+fn ch07_child_budget_never_exceeds_parent() {
+    let planner = GraphPlanner::new();
+    let mut view = agent_runtime_rs::domain::SessionView::default();
+    view.tasks.insert(
+        "p".into(),
+        agent_runtime_rs::domain::Task {
+            id: "p".into(),
+            goal: "A + B + C".into(),
+            budget: Budget {
+                max_tokens: 2,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+    let events = planner.plan(&view, "p").unwrap();
+    let total: i64 = events
+        .iter()
+        .filter_map(|event| match &event.payload {
+            EventPayload::TaskCreated(payload) => Some(payload.budget.max_tokens),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(total, 2);
+}
+
+#[test]
+fn ch07_repairs_partially_appended_plan() {
+    let planner = GraphPlanner::new();
+    let mut view = agent_runtime_rs::domain::SessionView::default();
+    view.tasks.insert(
+        "p".into(),
+        agent_runtime_rs::domain::Task {
+            id: "p".into(),
+            goal: "A + B".into(),
+            budget: Budget {
+                max_tokens: 4,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+    view.tasks.insert(
+        "p.s1".into(),
+        agent_runtime_rs::domain::Task {
+            id: "p.s1".into(),
+            parent_id: "p".into(),
+            goal: "A".into(),
+            status: TaskStatus::Running,
+            ..Default::default()
+        },
+    );
+    let events = planner.plan(&view, "p").unwrap();
+    assert_eq!(events.len(), 2);
+    assert!(matches!(events[0].payload, EventPayload::SubTaskSpawned(_)));
+    assert!(matches!(events[1].payload, EventPayload::TaskCreated(_)));
 }
 
 #[test]

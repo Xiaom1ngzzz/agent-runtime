@@ -141,8 +141,11 @@ func run() error {
 	got, _ := fresh.View(sid)
 	fmt.Printf("recovered replayed=%d parent_status=%s\n", n, got.Tasks[parent].Status)
 
-	all := store.Snapshot()
-	score := eval.CompareStreams(all, all, "")
+	// 教学 smoke:用独立切片模拟已审核 baseline 与本次 candidate。
+	// 生产评测应从版本化 fixture 加载 baseline,不能由本次运行自动生成。
+	baseline := store.Snapshot()
+	candidate := append([]domain.Event(nil), baseline...)
+	score := eval.CompareStreams(baseline, candidate, "")
 	fmt.Printf("eval passed=%v tool_calls=%d tool_errors=%d\n", score.Passed, score.ToolCalls, score.ToolErrors)
 	if got.Tasks[parent].Status != domain.TaskSucceeded {
 		return fmt.Errorf("parent not succeeded")

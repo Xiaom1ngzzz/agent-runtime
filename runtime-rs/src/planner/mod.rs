@@ -49,10 +49,24 @@ impl Planner for GraphPlanner {
         let g = build_task_graph(&view.tasks);
         let children = g.children_of(task_id);
         let goals = split_goals(&task.goal);
-        if goals.len() >= 2 && children.is_empty() {
-            return Ok(spawn_children(&task, &goals));
+        if goals.len() >= 2 {
+            if children.is_empty() {
+                return Ok(spawn_children(&task, &goals));
+            }
+            let repairs = repair_pending_children(&task, &goals, view);
+            if !repairs.is_empty() {
+                return Ok(repairs);
+            }
         }
         let prog = build_progress_from_view(view, task_id);
+        if let Some(prev) = view.progresses.get(task_id) {
+            let mut expected = prog.clone();
+            expected.version = prev.version;
+            expected.updated_at = prev.updated_at.clone();
+            if &expected == prev {
+                return Ok(vec![]);
+            }
+        }
         Ok(vec![Event {
             id: String::new(),
             session_id: String::new(),
@@ -69,21 +83,69 @@ impl Planner for GraphPlanner {
     }
 }
 
-fn spawn_children(parent: &Task, goals: &[String]) -> Vec<Event> {
-    let n = goals.len() as i64;
-    let mut share = if n > 0 {
-        parent.budget.max_tokens / n
-    } else {
-        0
-    };
-    if share < 1 && parent.budget.max_tokens > 0 {
-        share = 1;
+fn repair_pending_children(parent: &Task, goals: &[String], view: &SessionView) -> Vec<Event> {
+    let mut out = Vec::new();
+    for (i, goal) in goals.iter().enumerate() {
+        let child_id = format!("{}.s{}", parent.id, i + 1);
+        let Some(child) = view.tasks.get(&child_id) else {
+            let budget = distributed_budget(parent.budget, goals.len(), i);
+            out.push(Event {
+                id: String::new(),
+                session_id: String::new(),
+                task_id: parent.id.clone(),
+                turn_id: String::new(),
+                ts: None,
+                caused_by: String::new(),
+                payload: EventPayload::SubTaskSpawned(PayloadSubTaskSpawned {
+                    parent_task_id: parent.id.clone(),
+                    child_task_id: child_id.clone(),
+                    goal: goal.clone(),
+                    budget,
+                }),
+                seq: 0,
+            });
+            out.push(Event {
+                id: String::new(),
+                session_id: String::new(),
+                task_id: child_id,
+                turn_id: String::new(),
+                ts: None,
+                caused_by: String::new(),
+                payload: EventPayload::TaskCreated(PayloadTaskCreated {
+                    goal: goal.clone(),
+                    budget,
+                    parent_id: parent.id.clone(),
+                }),
+                seq: 0,
+            });
+            continue;
+        };
+        if child.status != TaskStatus::Pending {
+            continue;
+        }
+        out.push(Event {
+            id: String::new(),
+            session_id: String::new(),
+            task_id: child_id.clone(),
+            turn_id: String::new(),
+            ts: None,
+            caused_by: String::new(),
+            payload: EventPayload::TaskCreated(PayloadTaskCreated {
+                goal: goal.clone(),
+                budget: child.budget,
+                parent_id: parent.id.clone(),
+            }),
+            seq: 0,
+        });
     }
+    out
+}
+
+fn spawn_children(parent: &Task, goals: &[String]) -> Vec<Event> {
     let mut out = Vec::with_capacity(goals.len() * 2);
     for (i, goal) in goals.iter().enumerate() {
         let child_id = format!("{}.s{}", parent.id, i + 1);
-        let mut budget = parent.budget;
-        budget.max_tokens = share;
+        let budget = distributed_budget(parent.budget, goals.len(), i);
         out.push(Event {
             id: String::new(),
             session_id: String::new(),
@@ -113,6 +175,22 @@ fn spawn_children(parent: &Task, goals: &[String]) -> Vec<Event> {
             }),
             seq: 0,
         });
+    }
+    out
+}
+
+fn distributed_budget(
+    parent: crate::domain::Budget,
+    child_count: usize,
+    index: usize,
+) -> crate::domain::Budget {
+    let mut out = parent;
+    out.max_tokens = 0;
+    if parent.max_tokens > 0 && child_count > 0 {
+        out.max_tokens = parent.max_tokens / child_count as i64;
+        if index < (parent.max_tokens % child_count as i64) as usize {
+            out.max_tokens += 1;
+        }
     }
     out
 }

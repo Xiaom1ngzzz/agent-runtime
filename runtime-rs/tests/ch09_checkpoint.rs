@@ -9,7 +9,8 @@ use agent_runtime_rs::domain::{
     TurnStatus,
 };
 use agent_runtime_rs::state::{
-    recover, take_checkpoint, CheckpointStore, EventStore as _, MemCheckpointStore, State as _,
+    recover, take_checkpoint, Checkpoint, CheckpointStore, EventStore as _, MemCheckpointStore,
+    Snapshot, State as _, CHECKPOINT_SCHEMA_VERSION,
 };
 use fakes::{EventStoreFake, StateFake};
 
@@ -18,6 +19,50 @@ fn append(store: &mut EventStoreFake, state: &mut StateFake, sid: &str, mut e: E
     let mut buf = [e];
     store.append(&mut buf).unwrap();
     state.apply(&buf).unwrap();
+}
+
+#[test]
+fn ch09_schema_mismatch_falls_back_to_full_replay() {
+    let mut store = EventStoreFake::new();
+    let mut state = StateFake::new();
+    let mut cps = MemCheckpointStore::new();
+    let sid = "s-schema";
+    append(
+        &mut store,
+        &mut state,
+        sid,
+        Event {
+            id: String::new(),
+            session_id: String::new(),
+            task_id: "t1".into(),
+            turn_id: String::new(),
+            ts: None,
+            caused_by: String::new(),
+            payload: EventPayload::TaskCreated(PayloadTaskCreated {
+                goal: "full replay".into(),
+                ..Default::default()
+            }),
+            seq: 0,
+        },
+    );
+    cps.save(
+        sid,
+        Checkpoint {
+            schema_version: CHECKPOINT_SCHEMA_VERSION + 1,
+            snapshot: Snapshot {
+                seq: 999,
+                ..Default::default()
+            },
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        cps.latest(sid).unwrap().unwrap().schema_version,
+        CHECKPOINT_SCHEMA_VERSION + 1
+    );
+
+    let mut fresh = StateFake::new();
+    assert_eq!(recover(sid, &cps, &store, &mut fresh).unwrap(), 1);
 }
 
 #[test]

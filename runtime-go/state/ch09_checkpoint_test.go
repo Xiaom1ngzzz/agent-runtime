@@ -117,3 +117,43 @@ func TestCh09CloneIncludesContextFields(t *testing.T) {
 		t.Fatalf("working_set polluted: %s", snap.View.WorkingSet[0].TurnID)
 	}
 }
+
+func TestCh09SchemaMismatchFallsBackToFullReplay(t *testing.T) {
+	store := memfakes.NewEventStore()
+	st := memfakes.NewState()
+	cps := state.NewMemCheckpointStore()
+	const sid = "s-schema"
+
+	event := domain.Event{
+		SessionID: sid, TaskID: "t1", Type: domain.EvtTaskCreated,
+		Payload: domain.PayloadTaskCreated{Goal: "full replay"},
+	}
+	if err := store.Append([]domain.Event{event}); err != nil {
+		t.Fatal(err)
+	}
+	if err := cps.Save(sid, state.Checkpoint{
+		SchemaVersion: state.CheckpointSchemaVersion + 1,
+		Snapshot: state.Snapshot{
+			Seq:  999,
+			View: domain.SessionView{Session: domain.Session{ID: sid}, MaxSeq: 999},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, ok, err := cps.Latest(sid)
+	if err != nil || !ok {
+		t.Fatal(err, ok)
+	}
+	if got.SchemaVersion != state.CheckpointSchemaVersion+1 {
+		t.Fatalf("schema version lost: %d", got.SchemaVersion)
+	}
+
+	replayed, err := state.Recover(sid, cps, store, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replayed != 1 {
+		t.Fatalf("expected full replay, got %d events", replayed)
+	}
+}

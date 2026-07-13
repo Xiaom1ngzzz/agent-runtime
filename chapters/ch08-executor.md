@@ -1,6 +1,6 @@
 # 第 8 章 · 执行器
 
-> ch02 的 `Executor.Run(turn)` 只是接口;真逻辑一直住在 `memfakes`。这一章把它扶正:**工具注册表、绑定失败、超时、可选并行**,并保持"从事件流读 LLMReplied"的续跑语义。
+> ch02 的 `Executor.Run(turn)` 只是接口;真逻辑一直住在 `memfakes`。这一章把它扶正为可测试的工具执行器。Go 参考实现包含注册表、绑定失败、合作式超时与可选并行;Rust 参考实现当前是同步、顺序基线。
 
 ---
 
@@ -25,7 +25,7 @@ Executor 只负责 **Emit**:
   → 未知:额外 ToolBindFailed
 ```
 
-**刻意不把 `LLMResponse` 当参数**——唯一真相在事件流。进程崩溃后,新 Executor 实例仍可从 Store 续跑。
+**刻意不把 `LLMResponse` 当参数**——tool call 的来源是事件流。但当前 `Run` 会先执行工具、再把整组 Event 交给 Runtime 追加;若外部副作用成功后、`ToolReturned` 落库前崩溃,恢复时可能重复调用。因此本轮只能安全续跑幂等工具;生产实现还需要 submit/resume、CallID 去重与 outbox。
 
 ---
 
@@ -65,7 +65,7 @@ EvtToolBindFailed / PayloadToolBindFailed{CallID, Name, Reason}
 
 长工具 / HITL 需要把 Turn 拆成 submit+resume(ch01/ch02 前瞻)。Round 2 **不实现**拆分;接口仍是一次 `Run` 返回完整 Event 列表。超时视为该 call 失败,不挂起 Turn。
 
-> **实现状态**:并行开关已落地;tokenizer、动态按 Event 注册工具留扩展。
+> **实现状态**:Go 的并行开关与 context 超时已落地;Go 并行结果会按模型给出的 call 顺序重组。Rust 当前只实现同步顺序调用,`timeout` 字段尚未执行超时。submit/resume、持久化调度和动态按 Event 注册工具留作扩展。
 
 ---
 
@@ -90,13 +90,15 @@ cd runtime-go && go test ./executor -run TestCh08 -v
 cd runtime-rs && cargo test ch08_tool_executor
 ```
 
-断言:已知工具成功、未知工具出 `ToolBindFailed`、超时工具 `IsError`。
+Go 测试断言:已知工具成功、未知工具出 `ToolBindFailed`、合作式超时工具 `IsError`。Rust 测试当前断言前两项,不把未实现的超时/并行当作已验证能力。
 
 ---
 
 ## 8.5 与 Runtime.Step 的关系
 
 `Runtime.Step` 在 Chat 之后若 `len(ToolCalls)>0` 调 `Executor.Run`,再逐条 Append。换用 `ToolExecutor` 只需换依赖注入;memfakes.Executor 仍可用于旧测试。
+
+这个调用顺序也标出了当前参考实现的崩溃窗口:工具执行期间 `ToolCalled` 尚未持久化。它适合教学和幂等工具,不应被解释为 exactly-once 副作用协议。可恢复的生产协议应先追加调用意图,再以 `CallID` 作为幂等键执行,最后追加结果。
 
 ---
 
@@ -106,21 +108,23 @@ cd runtime-rs && cargo test ch08_tool_executor
 |------|------|------|----------|
 | 失败可见性 | BindFailed + ToolReturned | 多一条 Event | 若上游只关心 ToolReturned,可折叠 |
 | 超时 | per-call context | 不表达"部分完成挂起" | 长工具引入 submit/resume |
-| 并行 | 可选 Parallel | 顺序与 LLM 列出顺序可能不同 | 要求保序时关 Parallel |
+| 并行 | Go 可选 Parallel,Rust 顺序 | Go 返回 Event 仍按 call 顺序重组;完成时序不可见 | 需要流式完成事件或 Rust 并行时升级接口 |
 | 读 LLMReplied | 从 Store Snapshot | 需 Snapshot 能力 | 生产 Store 提供按 Turn 索引 |
 
 ---
 
 ## 8.7 小结
 
-- Executor 是 Emit 段的生产实现:注册、超时、绑定失败、可选并行。
+- Executor 是 Emit 段的参考实现:两端都有注册与绑定失败;超时和可选并行目前仅 Go 落地。
 - 事件流仍是 tool call 的唯一来源。
+- 当前一次性 `Run` 不消除"副作用成功、结果未落库"窗口;生产环境需幂等工具或 submit/resume + outbox。
 - 下一章 **第 9 章 · 检查点与恢复** 把 Snapshot 升级为可跨进程的 Checkpoint。
 
 ---
 
 ## 参考
 
-- Go: [`runtime-go/executor/`](../runtime-go/executor/)
-- Rust: [`runtime-rs/src/executor/`](../runtime-rs/src/executor/)
+- Go: [`runtime-go/executor/executor.go`](../runtime-go/executor/executor.go)
+- Rust: [`runtime-rs/src/executor/mod.rs`](../runtime-rs/src/executor/mod.rs)
+- 时序图:[`diagrams/ch08-executor-sequence.mmd`](../diagrams/ch08-executor-sequence.mmd)
 - 相关:`ch02` §2.4、`ch07`、`ch09`

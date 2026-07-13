@@ -308,10 +308,12 @@ Runtime 启动时,对每个 session:
 ```
 1. latest = SnapshotStore.Latest(session_id)   // (seq, view) 或 nil
 2. view   = latest?.view ?? SessionView::zero
-3. events = EventStore.Load(session_id, from_seq: (latest?.seq ?? 0) + 1)
+3. events = EventStore.LoadFrom(session_id, from_seq: latest?.seq ?? 0)
 4. State.ApplyToView(view, events)
 5. 把 view 放进 State
 ```
+
+这里 `LoadFrom(sid, seq)` 的契约是返回 `event.seq > seq` 的事件,因此传入快照自身的 `seq`,不要再手动 `+1`。
 
 如果 Snapshot 版本落后于代码(view 的 struct 字段变了),丢弃 Snapshot,从零 Fold ——快照永远是**加速器**,失去它只是慢一点,不影响正确性。
 

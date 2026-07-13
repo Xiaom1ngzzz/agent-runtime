@@ -22,6 +22,10 @@ pub fn build_task_graph(tasks: &HashMap<String, Task>) -> TaskGraph {
                 .push(id.clone());
         }
     }
+    g.roots.sort();
+    for children in g.children.values_mut() {
+        children.sort();
+    }
     g
 }
 

@@ -85,8 +85,8 @@ func TestCh07TaskGraphPlan(t *testing.T) {
 	// 子 Task 全部成功 → Saga 关父
 	for _, cid := range children {
 		appendApply(domain.Event{
-			Type:   domain.EvtTaskEnded,
-			TaskID: cid,
+			Type:    domain.EvtTaskEnded,
+			TaskID:  cid,
 			Payload: domain.PayloadTaskEnded{Status: domain.TaskSucceeded},
 		})
 	}
@@ -121,6 +121,14 @@ func TestCh07TaskGraphPlan(t *testing.T) {
 	if !found {
 		t.Fatal("expected ProgressUpdated")
 	}
+	appendApply(progEvs...)
+	view, err = st.View(sid)
+	must(err)
+	repeated, err := p.Plan(ctx, view, parentID)
+	must(err)
+	if len(repeated) != 0 {
+		t.Fatalf("unchanged progress should be idempotent, got %d events", len(repeated))
+	}
 }
 
 func TestCh07SplitGoals(t *testing.T) {
@@ -130,5 +138,40 @@ func TestCh07SplitGoals(t *testing.T) {
 	got := planner.SplitGoals("查天气 + 发邮件")
 	if len(got) != 2 || got[0] != "查天气" || got[1] != "发邮件" {
 		t.Fatalf("got %v", got)
+	}
+}
+
+func TestCh07ChildBudgetNeverExceedsParent(t *testing.T) {
+	p := planner.NewGraphPlanner()
+	view := domain.SessionView{Tasks: map[string]domain.Task{
+		"p": {ID: "p", Goal: "A + B + C", Budget: domain.Budget{MaxTokens: 2}},
+	}}
+	evs, err := p.Plan(stdctx.Background(), view, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	total := 0
+	for _, e := range evs {
+		if payload, ok := e.Payload.(domain.PayloadTaskCreated); ok {
+			total += payload.Budget.MaxTokens
+		}
+	}
+	if total != 2 {
+		t.Fatalf("child budget total=%d want 2", total)
+	}
+}
+
+func TestCh07RepairsPartiallyAppendedPlan(t *testing.T) {
+	p := planner.NewGraphPlanner()
+	view := domain.SessionView{Tasks: map[string]domain.Task{
+		"p":    {ID: "p", Goal: "A + B", Budget: domain.Budget{MaxTokens: 4}},
+		"p.s1": {ID: "p.s1", ParentID: "p", Goal: "A", Status: domain.TaskRunning},
+	}}
+	evs, err := p.Plan(stdctx.Background(), view, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 2 || evs[0].Type != domain.EvtSubTaskSpawned || evs[1].Type != domain.EvtTaskCreated {
+		t.Fatalf("expected missing child spawn/create repair, got %#v", evs)
 	}
 }

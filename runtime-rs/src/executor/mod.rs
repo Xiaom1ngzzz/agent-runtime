@@ -33,12 +33,21 @@ impl Registry {
     }
 
     pub fn register(&self, desc: Tool, fn_: ToolFn) {
-        self.descs.lock().unwrap().insert(desc.name.clone(), desc.clone());
+        self.descs
+            .lock()
+            .unwrap()
+            .insert(desc.name.clone(), desc.clone());
         self.funcs.lock().unwrap().insert(desc.name, fn_);
     }
 
     pub fn lookup(&self, name: &str) -> Option<ToolFn> {
         self.funcs.lock().unwrap().get(name).cloned()
+    }
+
+    pub fn descriptions(&self) -> Vec<Tool> {
+        let mut out: Vec<_> = self.descs.lock().unwrap().values().cloned().collect();
+        out.sort_by(|a, b| a.name.cmp(&b.name));
+        out
     }
 }
 

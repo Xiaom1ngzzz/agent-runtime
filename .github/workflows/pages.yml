@@ -25,6 +25,19 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: runtime-go/go.mod
+          cache: false
+
+      - name: Test Go reference implementation
+        working-directory: runtime-go
+        run: go test ./...
+
+      - name: Test Rust reference implementation
+        working-directory: runtime-rs
+        run: cargo test --all-targets
+
       - name: Install MkDocs Material
         run: pip install -r requirements.txt
 

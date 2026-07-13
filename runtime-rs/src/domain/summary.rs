@@ -34,7 +34,7 @@ pub struct Decision {
 }
 
 /// 一个 Task 的进度快照。ch04 §4.7.2。
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Progress {
     pub goal: String,
     pub done: Vec<Step>,
@@ -44,7 +44,7 @@ pub struct Progress {
     pub updated_at: String, // Event ID
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Step {
     pub intent: String,
     pub action: String,
@@ -67,7 +67,7 @@ pub enum StepKind {
     Aggregated,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct OpenLoop {
     pub question: String,
     pub raised_at: String, // Event ID

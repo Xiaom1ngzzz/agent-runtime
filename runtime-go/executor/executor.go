@@ -6,6 +6,7 @@ import (
 	stdcontext "context"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -48,6 +49,7 @@ func (r *Registry) Descriptions() []domain.Tool {
 	for _, d := range r.descs {
 		out = append(out, d)
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
 
@@ -184,7 +186,7 @@ func (x *ToolExecutor) dispatchOne(ctx stdcontext.Context, call domain.ToolCall)
 		return []domain.Event{
 			called,
 			{
-				Type: domain.EvtToolReturned,
+				Type:    domain.EvtToolReturned,
 				Payload: domain.PayloadToolReturned{CallID: call.ID, IsError: true, Content: msg},
 			},
 		}
@@ -192,7 +194,7 @@ func (x *ToolExecutor) dispatchOne(ctx stdcontext.Context, call domain.ToolCall)
 	return []domain.Event{
 		called,
 		{
-			Type: domain.EvtToolReturned,
+			Type:    domain.EvtToolReturned,
 			Payload: domain.PayloadToolReturned{CallID: call.ID, Content: content},
 		},
 	}
