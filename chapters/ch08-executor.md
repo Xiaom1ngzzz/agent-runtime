@@ -1,4 +1,4 @@
-# Chapter 8 · Executor
+# 第 8 章 · 执行器
 
 > ch02 的 `Executor.Run(turn)` 只是接口;真逻辑一直住在 `memfakes`。这一章把它扶正:**工具注册表、绑定失败、超时、可选并行**,并保持"从事件流读 LLMReplied"的续跑语义。
 
@@ -45,10 +45,11 @@ func (r *Registry) Descriptions() []domain.Tool  // 喂给 ContextEngine
 
 ```go
 type ToolExecutor struct {
-    Store    state.EventStore
-    Registry *Registry
-    Timeout  time.Duration // 单工具;0 = 只尊重 ctx
-    Parallel bool
+    Store     state.EventStore
+    Registry  *Registry
+    Timeout   time.Duration  // 单工具;0 = 只尊重 ctx
+    Parallel  bool
+    Snapshots snapshotSource // 可选;Store 不暴露 Snapshot 时显式注入(见 §8.6 取舍)
 }
 ```
 
@@ -114,7 +115,7 @@ cd runtime-rs && cargo test ch08_tool_executor
 
 - Executor 是 Emit 段的生产实现:注册、超时、绑定失败、可选并行。
 - 事件流仍是 tool call 的唯一来源。
-- 下一章把 Snapshot 升级为可跨进程的 **Checkpoint**。
+- 下一章 **第 9 章 · 检查点与恢复** 把 Snapshot 升级为可跨进程的 Checkpoint。
 
 ---
 

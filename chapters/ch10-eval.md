@@ -1,4 +1,4 @@
-# Chapter 10 · Evaluation & Optimization
+# 第 10 章 · 评测与优化
 
 > 前面九章把 Runtime 建成可跑、可恢复的系统。这一章回答:**怎么知道改 Prompt / Planner / 工具绑定没有把系统弄坏?**最小答案是一个结构化的 **Eval** 框架——对比金标事件流与实际事件流,产出可断言的 Score。
 
@@ -55,6 +55,12 @@ runtime-rs/tests/ch10_eval.rs
 ```bash
 cd runtime-go && go test ./eval -run TestCh10 -v
 cd runtime-rs && cargo test ch10_compare_streams
+```
+
+M3 主线的端到端串联(Planner 拆子 Task → Executor 跑工具 → Saga 关父 → Checkpoint 恢复 → Eval 打分)在 [`runtime-go/examples/m3/`](../runtime-go/examples/m3/):
+
+```bash
+cd runtime-go && go run ./examples/m3     # 或 go test ./examples/m3
 ```
 
 ---

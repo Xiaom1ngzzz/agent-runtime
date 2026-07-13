@@ -1,4 +1,4 @@
-# Chapter 9 · Checkpoint & Recovery
+# 第 9 章 · 检查点与恢复
 
 > ch03 把 Snapshot 定义成 Turn 边界加速器。这一章把它升级为 **Checkpoint**:带 schema 版本、深拷贝含 Context 字段、一条 `Recover` 恢复路径——让"进程挂了再起来"成为测试里可跑的事实。
 
@@ -64,7 +64,7 @@ type CheckpointStore interface {
 }
 
 func TakeCheckpoint(sessionID string, st State, cps CheckpointStore) error
-func Recover(sessionID string, cps CheckpointStore, store EventStore, st RecoverableState) (replayed int, error)
+func Recover(sessionID string, cps CheckpointStore, store EventStore, st RecoverableState) (replayed int, err error)
 ```
 
 Rust 对齐:`take_checkpoint` / `recover`。
@@ -96,7 +96,7 @@ cd runtime-rs && cargo test ch09_checkpoint
 
 - Checkpoint 让 Snapshot 可版本化、可一键恢复。
 - 深拷贝补齐 Context 字段后,恢复视图与全量 Fold 一致。
-- 下一章用评测框架把"跑通"变成"可回归"。
+- 下一章 **第 10 章 · 评测与优化** 用评测框架把"跑通"变成"可回归"。
 
 ---
 

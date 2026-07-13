@@ -1,5 +1,5 @@
 site_name: Agent Runtime
-site_description: Building an Agent Runtime from First Principles
+site_description: 从第一原理构建 Agent Runtime
 site_url: https://xiaom1ngzzz.github.io/agent-runtime/
 repo_url: https://github.com/Xiaom1ngzzz/agent-runtime
 repo_name: Xiaom1ngzzz/agent-runtime
@@ -78,26 +78,26 @@ nav:
       - 目标与写作原则: BOOK.md
       - 路线图: ROADMAP.md
       - 风格指南: STYLE_GUIDE.md
-  - Part I · Foundation:
-      - Ch01 · Runtime Domain Model: chapters/ch01-runtime-domain.md
-      - Ch02 · Runtime Data Flow: chapters/ch02-runtime-dataflow.md
-      - Ch03 · State & Event Model: chapters/ch03-state-event.md
-  - Part II · Context System:
-      - Ch04 · Context Engine: chapters/ch04-context-engine.md
-      - Ch05 · Memory Architecture: chapters/ch05-memory.md
-      - Ch06 · Prompt Compiler: chapters/ch06-prompt-compiler.md
-  - Part III · Execution:
-      - Ch07 · Planner & Task Graph: chapters/ch07-planner.md
-      - Ch08 · Executor: chapters/ch08-executor.md
-      - Ch09 · Checkpoint & Recovery: chapters/ch09-checkpoint.md
-  - Part IV · Evolution:
-      - Ch10 · Evaluation & Optimization: chapters/ch10-eval.md
-  - Architecture Decisions:
+  - 第一部分 · 基础:
+      - 第 1 章 · 运行时领域模型: chapters/ch01-runtime-domain.md
+      - 第 2 章 · 运行时数据流: chapters/ch02-runtime-dataflow.md
+      - 第 3 章 · 状态与事件模型: chapters/ch03-state-event.md
+  - 第二部分 · 上下文系统:
+      - 第 4 章 · 上下文引擎: chapters/ch04-context-engine.md
+      - 第 5 章 · 记忆架构: chapters/ch05-memory.md
+      - 第 6 章 · Prompt 编译器: chapters/ch06-prompt-compiler.md
+  - 第三部分 · 执行系统:
+      - 第 7 章 · 规划器与任务图: chapters/ch07-planner.md
+      - 第 8 章 · 执行器: chapters/ch08-executor.md
+      - 第 9 章 · 检查点与恢复: chapters/ch09-checkpoint.md
+  - 第四部分 · 演进:
+      - 第 10 章 · 评测与优化: chapters/ch10-eval.md
+  - 架构决策:
       - ADR 模板: adr/ADR-000.md
       - ADR-001 · Runtime 边界与职责: adr/ADR-001-runtime-domain.md
       - ADR-002 · Runtime 数据流协议: adr/ADR-002-dataflow-protocol.md
       - ADR-003 · Runtime 与 DDD 对应关系: adr/ADR-003-ddd-mapping.md
-      - ADR-004 · Task Graph 与 Saga: adr/ADR-004-task-graph-saga.md
+      - ADR-004 · 任务图与 Saga: adr/ADR-004-task-graph-saga.md
 
 extra:
   social:

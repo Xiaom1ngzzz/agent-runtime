@@ -1,6 +1,6 @@
-# Chapter 7 · Planner & Task Graph
+# 第 7 章 · 规划器与任务图
 
-> Part I/II 把"一次 Turn 怎么跑"讲清楚了。生产 Agent 的目标很少是单步的——"查天气 + 发邮件"天然是两件事。这一章把扁平 Task 打开成 **Task Graph**,并引入 **Planner** 与最小 **Saga** 协调。
+> 第一、二部分把"一次 Turn 怎么跑"讲清楚了。生产 Agent 的目标很少是单步的——"查天气 + 发邮件"天然是两件事。这一章把扁平 Task 打开成 **Task Graph**,并引入 **Planner** 与最小 **Saga** 协调。
 
 ---
 
@@ -17,7 +17,7 @@ ch01 §1.9 把 Task 按扁平处理。demo 里 Goal 写 `"查天气 + 发邮件"
 
 ---
 
-## 7.2 概念:Task Graph + Planner + Saga
+## 7.2 概念:任务图 + 规划器 + Saga
 
 ```
 Session
@@ -30,8 +30,8 @@ Session
 
 | 角色 | 职责 | 不做什么 |
 |------|------|----------|
-| **Planner** | 读 `SessionView`,决定是否派生子 Task、是否更新 Progress | 不调 LLM、不跑工具 |
-| **Task Graph** | 从 `Tasks` 派生的只读图(`Roots` / `Children`) | 不单独持久化 |
+| **规划器 (Planner)** | 读 `SessionView`,决定是否派生子 Task、是否更新 Progress | 不调 LLM、不跑工具 |
+| **任务图 (Task Graph)** | 从 `Tasks` 派生的只读图(`Roots` / `Children`) | 不单独持久化 |
 | **SagaCoordinator** | 子 Task 全部终态后关闭父 Task | 不做补偿事务(Round 2) |
 
 与 DDD 的对应见 [ADR-004](../adr/ADR-004-task-graph-saga.md):Saga / Process Manager 在这里落地。
@@ -69,7 +69,7 @@ g.ChildrenOf("t1")   // 直接子节点
 
 ---
 
-## 7.4 Planner 接口
+## 7.4 规划器接口
 
 ```go
 type Planner interface {
@@ -148,13 +148,13 @@ cd runtime-rs && cargo test ch07_task_graph
 - Planner 产出规划 Event;Saga 汇合子 Task 终态。
 - Progress 由 Planner 维护,接上 ch04 schema。
 
-下一章 **Executor** 把工具调度从 memfake 升级为可超时、可绑定失败的执行器。
+下一章 **第 8 章 · 执行器** 把工具调度从 memfake 升级为可超时、可绑定失败的执行器。
 
 ---
 
 ## 参考
 
-- [ADR-004 · Task Graph 与 Saga](../adr/ADR-004-task-graph-saga.md)
+- [ADR-004 · 任务图与 Saga](../adr/ADR-004-task-graph-saga.md)
 - [ADR-003 · DDD 对应](../adr/ADR-003-ddd-mapping.md)
 - Go: [`runtime-go/planner/`](../runtime-go/planner/)
 - Rust: [`runtime-rs/src/planner/`](../runtime-rs/src/planner/)

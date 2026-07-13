@@ -1,7 +1,7 @@
 // Package state / checkpoint.go —— Checkpoint 与恢复(ch09)。
 //
 // Checkpoint = Turn 边界 Snapshot + 校验元数据。
-// 恢复:Latest → LoadSnapshot → LoadFrom(seq+1) → Apply。
+// 恢复:Latest → LoadSnapshot → LoadFrom(seq)(返回 seq 之后的增量)→ Apply。
 package state
 
 import (

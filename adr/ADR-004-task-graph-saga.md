@@ -1,4 +1,4 @@
-# ADR-004: Task Graph 与 Saga / Process Manager
+# ADR-004: 任务图与 Saga / Process Manager
 
 - **状态**: Accepted
 - **日期**: 2026-07-13

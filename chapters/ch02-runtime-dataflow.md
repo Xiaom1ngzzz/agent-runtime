@@ -1,4 +1,4 @@
-# Chapter 2 · Runtime Data Flow
+# 第 2 章 · 运行时数据流
 
 > 第 1 章讲清了世界里有哪些名词。这一章讲**每次 Turn 里数据是怎么流的**——把 6 个接口拼成一条流水线,并给出可以端到端跑的 Runtime 协调器。
 
@@ -392,7 +392,7 @@ cargo test ch02
 - Runtime 协调器已经用 Go / Rust 各实现一份,能通过内存 fake 端到端跑通"查天气 + 发邮件",测试证明与 ch01 手工样本在关键指标(20 条 Event、Task 成功、tokens_in=1830)上收敛。
 - Fold / Project / Compile 是纯函数,是回放/快照/并发的底座。Chat / Emit 有副作用,是需要"如实记录、不承诺原子性、承诺可审计"的段。
 
-下一章 **State & Event Model** 会把 `Fold` 这一段落成完整实现:Event schema、序列化、Checkpoint、追加与并发。
+下一章 **第 3 章 · 状态与事件模型** 会把 `Fold` 这一段落成完整实现:Event schema、序列化、Checkpoint、追加与并发。
 
 ---
 

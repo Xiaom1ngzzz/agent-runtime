@@ -1,4 +1,4 @@
-# Chapter 3 · State & Event Model
+# 第 3 章 · 状态与事件模型
 
 > 第 1 章讲了世界里有哪些名词,第 2 章讲了数据怎么在里面流动。这一章往里钻一层:**Event 到底怎么存、State 到底怎么算、二者又如何一起活下来**——落到 schema、序列化、并发、快照、恢复这些具体问题上。
 
@@ -225,7 +225,7 @@ State 提供两件事:`Apply` 把 Event 折进 View,`View` 返回只读快照。
 
 `memfakes.State.applyOne` 按 Event 类型增量更新 SessionView,分两层:
 
-| 层次 | 处理的 EventType | 写入 SessionView 的字段 | Part I 用途 |
+| 层次 | 处理的 EventType | 写入 SessionView 的字段 | 第一部分用途 |
 |------|------------------|-------------------------|-------------|
 | **生命周期** | `SessionOpened / TaskCreated / TaskEnded / TurnStarted / TurnEnded` | `Session`、`Tasks`、`LastTurn` | ch02 `Step` 前置检查、成本汇总 |
 | **Context 投影(占位)** | `ContextCompressed / ProgressUpdated / MemoryQueried` | `WorkingSet`、`Summaries`、`Progresses`、`MemoryRefs` | ch04–ch05 展开;ch02 demo 已预 Fold,供后续章节测试 |
@@ -513,7 +513,7 @@ cd runtime-rs && cargo test snapshot_replay
 - 失败模型三层各自兜底:**存储保证原子,Fold 保证一致,业务负责补救**。
 - 参考实现:Go/Rust 各一份,序列化走"tag + content",新增 EventType 时靠编译器/factory 表卡住兼容性。
 
-下一章 **Context Engine** 会把 Fold 出的 SessionView + 原始 Event 流,投影成"这次 Turn 要发给 LLM 的上下文",并展开裁剪、压缩、多级降级的设计。
+下一章 **第 4 章 · 上下文引擎** 会把 Fold 出的 SessionView + 原始 Event 流,投影成"这次 Turn 要发给 LLM 的上下文",并展开裁剪、压缩、多级降级的设计。
 
 ---
 

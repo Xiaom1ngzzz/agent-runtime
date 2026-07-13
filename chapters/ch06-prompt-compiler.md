@@ -1,4 +1,4 @@
-# Chapter 6 · Prompt Compiler
+# 第 6 章 · Prompt 编译器
 
 > ch04 §4.8 抛出过一个词:**Prompt Compiler**。它是"从 Context 到 Messages"这一段。ch06 把它撕开——为什么"拼字符串"是错的、为什么它更像编译器而不是模板引擎、以及不同 Provider 的差异如何在同一份 Context 上兑现。
 
@@ -373,7 +373,7 @@ type Template struct {
 | Type-check 失败 | 拒绝本次 Compile,拒绝本 Turn 的 LLM 调用 | `TurnEnded{status=failed, reason="compile: ..."}` | 是 |
 | Provider 特有字段缺失(如缺 tools 字段但 message 里有 tool_calls) | Type-check 拦截,同上 | 同上 | 是 |
 | Prompt Cache 语法错误 | 静默降级为不 cache,记 metric | `PromptCacheDisabled{reason}`(规划中,参考实现未包含) | 否 |
-| Tool schema 无效 | 移除该 tool,记录 | `ToolBindFailed{name, reason}`(规划中,随 ch08 工具注册引入) | 否(LLM 可能用 fallback 回应) |
+| Tool schema 无效 | 移除该 tool,记录 | `ToolBindFailed{name, reason}`(ch08 随工具注册表落地) | 否(LLM 可能用 fallback 回应) |
 | Compile 内部 panic | 上层 Loop 捕获,降级为 memfakes 的 pass-through | `TurnEnded{status=failed, reason="compile-panic"}` | 是 |
 
 **核心哲学**:Compile 是"数据流的最后一段纯函数",出错代价小但可见。**任何降级都在 Event 流里留痕**,与 ADR-002 完全一致。
@@ -443,7 +443,7 @@ PromptStore(§6.8.2)未随本轮落地,见 §6.11 取舍。
 - Prompt 是版本化资产:每个模板一个版本号,进 Event 流(如 `Summary.PromptVersion`),支持 eval + 回滚。
 - 多级降级:Type-check 失败终止 Turn(是),Cache/schema 失效降级继续(否)。
 
-Part II 到此结束。下一章 **Chapter 7 · Planner & Task Graph** 会展开 Task 层——从扁平任务走向依赖图,以及 Progress 与 Graph 的关系。
+第二部分到此结束。下一章 **第 7 章 · 规划器与任务图** 会展开 Task 层——从扁平任务走向依赖图,以及 Progress 与 Graph 的关系。
 
 ---
 

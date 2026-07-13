@@ -142,9 +142,9 @@ func (PayloadMemoryQueried) eventPayload() {}
 // ---------- Task Graph (ch07) ----------
 
 // PayloadSubTaskSpawned 记录 Planner 为父 Task 派生出一个子 Task。
-// 与 TaskCreated 的关系:SubTaskSpawned 是 Planner 的意图事件;
-// 协调器/Loop 随后追加 TaskCreated{ParentID} 真正创建子 Task。
-// Round 2 参考实现里 Plan 直接产出 TaskCreated(带 ParentID),本 payload 保留给显式图编排。
+// 与 TaskCreated 的关系:SubTaskSpawned 是 Planner 的意图事件(审计"谁决定拆分");
+// 紧随其后的 TaskCreated{ParentID} 才真正创建子 Task。
+// Round 2 的 GraphPlanner 成对产出两者(见 planner/graph.go spawnChildren)。
 type PayloadSubTaskSpawned struct {
 	ParentTaskID string
 	ChildTaskID  string

@@ -1,4 +1,4 @@
-# Chapter 5 · Memory Architecture
+# 第 5 章 · 记忆架构
 
 > ch04 定义了 Context 的六层输入,其中第 5 层 `Memory Refs` 挂在那里等着展开。这一章把它撕开:**什么该进 Memory、什么不该;写入怎么写、查询怎么查;跨 Session 的记忆如何在纯函数 Assemble 里被安全消费**。
 
@@ -525,7 +525,7 @@ runtime-rs/src/
 - 生命周期规则按类型分档;推荐 Soft expire。
 - 降级路径:Memory 全部挂掉,Runtime 继续跑(效果打折)。
 
-下一章 **Chapter 6 · Prompt Compiler** 会展开 ch04 §4.8 的"从 Context 到 Messages",给出 Provider Adapter 的落地(OpenAI / Anthropic),并把 Prompt 从"字符串"变成"版本化资产"。
+下一章 **第 6 章 · Prompt 编译器** 会展开 ch04 §4.8 的"从 Context 到 Messages",给出 Provider Adapter 的落地(OpenAI / Anthropic),并把 Prompt 从"字符串"变成"版本化资产"。
 
 ---
 

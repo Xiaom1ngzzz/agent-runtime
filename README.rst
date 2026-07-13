@@ -1,27 +1,27 @@
-# Building an Agent Runtime from First Principles
+# 从第一原理构建 Agent Runtime
 
 目录
 
 ```txt
-Part I  Foundation（世界观）
+第一部分  基础（世界观）
 
-Chapter 1 Runtime Domain Model       ⭐⭐⭐⭐⭐
-Chapter 2 Runtime Data Flow          ⭐⭐⭐⭐⭐
-Chapter 3 State & Event Model        ⭐⭐⭐⭐⭐
+第 1 章  运行时领域模型            ⭐⭐⭐⭐⭐
+第 2 章  运行时数据流              ⭐⭐⭐⭐⭐
+第 3 章  状态与事件模型            ⭐⭐⭐⭐⭐
 
-Part II Context System（上下文系统）
+第二部分  上下文系统
 
-Chapter 4 Context Engine             ⭐⭐⭐⭐⭐
-Chapter 5 Memory Architecture        ⭐⭐⭐⭐⭐
-Chapter 6 Prompt Compiler            ⭐⭐⭐⭐⭐
+第 4 章  上下文引擎                ⭐⭐⭐⭐⭐
+第 5 章  记忆架构                  ⭐⭐⭐⭐⭐
+第 6 章  Prompt 编译器            ⭐⭐⭐⭐⭐
 
-Part III Execution（执行系统）
+第三部分  执行系统
 
-Chapter 7 Planner & Task Graph       ⭐⭐⭐⭐⭐
-Chapter 8 Executor                   ⭐⭐⭐⭐⭐
-Chapter 9 Checkpoint & Recovery      ⭐⭐⭐⭐
+第 7 章  规划器与任务图            ⭐⭐⭐⭐⭐
+第 8 章  执行器                   ⭐⭐⭐⭐⭐
+第 9 章  检查点与恢复              ⭐⭐⭐⭐
 
-Part IV Evolution（演进）
+第四部分  演进
 
-Chapter10 Evaluation & Optimization ⭐⭐⭐⭐
+第 10 章 评测与优化                ⭐⭐⭐⭐
 ```
