@@ -1,0 +1,39 @@
+%% 与原文 ASCII 同构:五档并排,上为内容、下为该档迁出条件;不是强制线性状态机。
+%% Warm→Cold 为「可选归档」。
+flowchart LR
+    subgraph New["New"]
+        direction TB
+        N1["刚刚 Fold 中的 Turn"]
+        N2["Turn 结束<br/>自动进入 Working Set"]
+        N1 --- N2
+    end
+
+    subgraph Hot["Hot"]
+        direction TB
+        H1["Working Set 里的原文 turn"]
+        H2["Working Set 满了 ≥ N<br/>触发 Compressor"]
+        H1 --- H2
+    end
+
+    subgraph Warm["Warm"]
+        direction TB
+        W1["Compressed History<br/>里的结构化摘要"]
+        W2["可选归档到 Memory<br/>ch05 路径 A"]
+        W1 --- W2
+    end
+
+    subgraph Cold["Cold"]
+        direction TB
+        C1["Memory-only 向量<br/>不再直接入 Prompt"]
+        C2["按 Retention<br/>策略归档"]
+        C1 --- C2
+    end
+
+    subgraph Archive["Archive"]
+        direction TB
+        A1["冷存储<br/>不再进入 Prompt"]
+        A2["永不删除<br/>合规 / 审计"]
+        A1 --- A2
+    end
+
+    New -.-> Hot -.-> Warm -.-> Cold -.-> Archive

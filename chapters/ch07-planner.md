@@ -46,6 +46,8 @@ Session
 
 ### 7.3.1 `Task.ParentID`
 
+**Go**
+
 ```go
 // runtime-go/domain/domain.go
 type Task struct {
@@ -53,6 +55,21 @@ type Task struct {
     Goal string
     Status TaskStatus
     Budget Budget
+    // ...
+}
+```
+
+**Rust**
+
+```rust
+// runtime-rs/src/domain/mod.rs
+pub struct Task {
+    pub id: String,
+    pub session_id: String,
+    pub parent_id: String, // 空 = 根 Task
+    pub goal: String,
+    pub status: TaskStatus,
+    pub budget: Budget,
     // ...
 }
 ```
@@ -65,10 +82,20 @@ Planner 的意图事件。Round 2 里 `GraphPlanner` 同时产出 `SubTaskSpawne
 
 ### 7.3.3 `BuildTaskGraph`
 
+**Go**
+
 ```go
 g := domain.BuildTaskGraph(view.Tasks)
 g.Roots              // ParentID == ""
 g.ChildrenOf("t1")   // 直接子节点
+```
+
+**Rust**
+
+```rust
+let g = build_task_graph(&view.tasks);
+g.roots              // parent_id 为空
+g.children_of("t1")  // 直接子节点
 ```
 
 `Roots` 与 `Children` 都按 Task ID 稳定排序。当前模型没有显式创建序号,因此不能把 map/HashMap 遍历顺序解释为创建顺序。
@@ -77,9 +104,19 @@ g.ChildrenOf("t1")   // 直接子节点
 
 ## 7.4 规划器接口
 
+**Go**
+
 ```go
 type Planner interface {
     Plan(ctx context.Context, view domain.SessionView, taskID string) ([]domain.Event, error)
+}
+```
+
+**Rust**
+
+```rust
+pub trait Planner {
+    fn plan(&self, view: &SessionView, task_id: &str) -> Result<Vec<Event>, PlannerError>;
 }
 ```
 
@@ -97,11 +134,22 @@ type Planner interface {
 
 ## 7.5 Saga:子成败如何汇到父
 
+**Go**
+
 ```go
 ended, _ := planner.SagaCoordinator{}.OnChildEnded(view, parentID)
 // 全部 Succeeded → TaskEnded{Succeeded}
 // 任一 Failed/Canceled/Timeout → TaskEnded{Failed}
 // 仍有 Running → 空
+```
+
+**Rust**
+
+```rust
+let ended = SagaCoordinator.on_child_ended(&view, parent_id)?;
+// 全部 Succeeded → TaskEnded{Succeeded}
+// 任一 Failed/Canceled/Timeout → TaskEnded{Failed}
+// 仍有 Running → 空 Vec
 ```
 
 > **实现状态**:Round 2 只做"全成/有败"两种汇合。**Saga 仅在 Planner 规划完成(子 `TaskCreated` 全部落库)后生效**;若规划 Event 只追加了一部分就崩溃,恢复后须先由 Planner 补全子 Task,再评估父 Task 终态。补偿(撤销已发邮件)、超时级联取消留给扩展。
