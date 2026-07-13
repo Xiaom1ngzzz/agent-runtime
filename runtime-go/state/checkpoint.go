@@ -53,6 +53,10 @@ func (s *MemCheckpointStore) Save(sessionID string, cp Checkpoint) error {
 		cp.SchemaVersion = CheckpointSchemaVersion
 	}
 	cp.Snapshot = cloneSnap(cp.Snapshot)
+	if existing, ok := s.checkpoints[sessionID]; ok && existing.Snapshot.Seq > cp.Snapshot.Seq {
+		return fmt.Errorf("checkpoint save rejected: existing seq %d > new seq %d",
+			existing.Snapshot.Seq, cp.Snapshot.Seq)
+	}
 	s.checkpoints[sessionID] = cp
 	return nil
 }
@@ -61,10 +65,11 @@ func (s *MemCheckpointStore) Save(sessionID string, cp Checkpoint) error {
 type RecoverableState interface {
 	State
 	LoadSnapshot(sessionID string, view domain.SessionView)
+	ResetSession(sessionID string)
 }
 
 // Recover 从 Checkpoint + EventStore 增量重建 State。
-// 若 Checkpoint schema 不匹配或缺失,fromSeq=0 全量 Load。
+// 若 Checkpoint schema 不匹配或缺失,先 Reset 再 fromSeq=0 全量 Load。
 func Recover(sessionID string, cps CheckpointStore, store EventStore, st RecoverableState) (replayed int, err error) {
 	cp, ok, err := cps.Latest(sessionID)
 	if err != nil {
@@ -72,8 +77,15 @@ func Recover(sessionID string, cps CheckpointStore, store EventStore, st Recover
 	}
 	fromSeq := int64(0)
 	if ok && cp.SchemaVersion == CheckpointSchemaVersion {
+		if cp.Snapshot.Seq != cp.Snapshot.View.MaxSeq {
+			return 0, fmt.Errorf("checkpoint seq/view mismatch: seq=%d maxSeq=%d",
+				cp.Snapshot.Seq, cp.Snapshot.View.MaxSeq)
+		}
+		st.ResetSession(sessionID)
 		st.LoadSnapshot(sessionID, cp.Snapshot.View)
 		fromSeq = cp.Snapshot.Seq
+	} else {
+		st.ResetSession(sessionID)
 	}
 	remaining, err := store.LoadFrom(sessionID, fromSeq)
 	if err != nil {

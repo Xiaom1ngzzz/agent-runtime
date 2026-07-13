@@ -43,7 +43,10 @@ impl Runtime {
             let st = self.state.lock().unwrap();
             let view = st.view(session_id).map_err(|e| StepError(e.0))?;
             match view.last_turn.get(task_id) {
-                Some(t) if t.id == turn_id => {}
+                Some(t) if t.id == turn_id && t.status == crate::domain::TurnStatus::Running => {}
+                Some(t) if t.id == turn_id => {
+                    return Err(StepError("turn already completed".into()));
+                }
                 _ => {
                     return Err(StepError(
                         "turn not started (append TurnStarted before step)".into(),
@@ -109,6 +112,7 @@ impl Runtime {
         if !tool_calls.is_empty() {
             let tool_turn = Turn {
                 id: turn_id.into(),
+                session_id: session_id.into(),
                 task_id: task_id.into(),
                 ..Default::default()
             };

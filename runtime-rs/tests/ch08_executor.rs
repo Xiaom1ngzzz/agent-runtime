@@ -5,9 +5,7 @@ mod fakes;
 
 use std::sync::{Arc, Mutex};
 
-use agent_runtime_rs::domain::{
-    Event, EventPayload, PayloadLLMReplied, Tool, ToolCall, Turn,
-};
+use agent_runtime_rs::domain::{Event, EventPayload, PayloadLLMReplied, Tool, ToolCall, Turn};
 use agent_runtime_rs::executor::{Executor, Registry, SnapshotStore, ToolExecutor, ToolFn};
 use agent_runtime_rs::state::EventStore as _;
 use fakes::EventStoreFake;

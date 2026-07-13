@@ -71,7 +71,6 @@ pub struct AnthropicCompiler {
 impl PromptCompiler for AnthropicCompiler {
     fn compile(&self, ctx: &Context) -> Result<Messages, PromptError> {
         check_messages(&ctx.messages)?;
-        check_no_consecutive_user(&ctx.messages)?;
         Ok(ctx.messages.clone())
     }
 }
@@ -79,11 +78,9 @@ impl PromptCompiler for AnthropicCompiler {
 impl AnthropicCompiler {
     pub fn compile_to_provider(&self, ctx: &Context) -> Result<AnthropicRequest, PromptError> {
         check_messages(&ctx.messages)?;
-        check_no_consecutive_user(&ctx.messages)?;
 
         let mut req = AnthropicRequest { model: self.model.clone(), ..Default::default() };
 
-        // system 收集
         let sys_parts: Vec<&str> = ctx
             .messages
             .iter()
@@ -92,20 +89,40 @@ impl AnthropicCompiler {
             .collect();
         req.system = sys_parts.join("\n\n");
 
+        let mut pending_tool_results: Vec<AnthropicContent> = Vec::new();
+        let flush_tool_results = |req: &mut AnthropicRequest, pending: &mut Vec<AnthropicContent>| {
+            if pending.is_empty() {
+                return;
+            }
+            req.messages.push(AnthropicMessage {
+                role: "user".into(),
+                content: std::mem::take(pending),
+            });
+        };
+
         for m in &ctx.messages {
             match m.role.as_str() {
-                "system" => {} // 已进 system 字段
+                "system" => {}
                 "user" => {
+                    flush_tool_results(&mut req, &mut pending_tool_results);
+                    let block = AnthropicContent {
+                        kind: "text".into(),
+                        text: m.content.clone(),
+                        ..Default::default()
+                    };
+                    if let Some(last) = req.messages.last_mut() {
+                        if last.role == "user" {
+                            last.content.push(block);
+                            continue;
+                        }
+                    }
                     req.messages.push(AnthropicMessage {
                         role: "user".into(),
-                        content: vec![AnthropicContent {
-                            kind: "text".into(),
-                            text: m.content.clone(),
-                            ..Default::default()
-                        }],
+                        content: vec![block],
                     });
                 }
                 "assistant" => {
+                    flush_tool_results(&mut req, &mut pending_tool_results);
                     let mut contents = Vec::new();
                     if !m.content.is_empty() {
                         contents.push(AnthropicContent {
@@ -129,19 +146,17 @@ impl AnthropicCompiler {
                     });
                 }
                 "tool" => {
-                    req.messages.push(AnthropicMessage {
-                        role: "user".into(),
-                        content: vec![AnthropicContent {
-                            kind: "tool_result".into(),
-                            tool_use_id: m.tool_call_id.clone(),
-                            content: m.content.clone(),
-                            ..Default::default()
-                        }],
+                    pending_tool_results.push(AnthropicContent {
+                        kind: "tool_result".into(),
+                        tool_use_id: m.tool_call_id.clone(),
+                        content: m.content.clone(),
+                        ..Default::default()
                     });
                 }
                 _ => {}
             }
         }
+        flush_tool_results(&mut req, &mut pending_tool_results);
 
         for t in &ctx.tools {
             let schema = if t.schema.is_empty() {

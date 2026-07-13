@@ -37,7 +37,12 @@ func NewInMemStoreWithClock(nowFn func() time.Time) *InMemStore {
 func (s *InMemStore) Upsert(_ stdctx.Context, item domain.MemoryItem) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if existing, ok := s.items[item.Key]; ok {
+	slot := storeKey(item)
+	if existing, ok := s.items[slot]; ok {
+		if item.TenantID != "" && existing.TenantID != "" && item.TenantID != existing.TenantID {
+			return fmt.Errorf("memory tenant mismatch for key %q: got %q, existing %q",
+				item.Key, item.TenantID, existing.TenantID)
+		}
 		if item.Version < existing.Version {
 			// 拒绝倒退,§5.9 MemoryUpsertRejected
 			return fmt.Errorf("memory version regression for key %q: got %d, current %d",
@@ -51,7 +56,7 @@ func (s *InMemStore) Upsert(_ stdctx.Context, item domain.MemoryItem) error {
 	if item.UpdatedAt == "" {
 		item.UpdatedAt = s.nowFn().UTC().Format(time.RFC3339)
 	}
-	s.items[item.Key] = item
+	s.items[slot] = item
 	return nil
 }
 
@@ -75,6 +80,9 @@ func (s *InMemStore) Query(_ stdctx.Context, q domain.Query) ([]domain.MemoryRef
 	}
 	var candidates []scored
 	for _, item := range s.items {
+		if q.TenantID != "" && item.TenantID != q.TenantID {
+			continue
+		}
 		// 过期过滤
 		if !q.IncludeExpired && item.ExpiresAt != "" {
 			if t, err := time.Parse(time.RFC3339, item.ExpiresAt); err == nil && t.Before(now) {
@@ -153,14 +161,23 @@ func (s *InMemStore) Query(_ stdctx.Context, q domain.Query) ([]domain.MemoryRef
 func (s *InMemStore) Expire(_ stdctx.Context, key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if item, ok := s.items[key]; ok {
-		item.ExpiresAt = s.nowFn().UTC().Add(-time.Second).Format(time.RFC3339)
-		s.items[key] = item
+	for slot, item := range s.items {
+		if item.Key == key {
+			item.ExpiresAt = s.nowFn().UTC().Add(-time.Second).Format(time.RFC3339)
+			s.items[slot] = item
+		}
 	}
 	return nil
 }
 
 // ---------- helpers ----------
+
+func storeKey(item domain.MemoryItem) string {
+	if item.TenantID != "" {
+		return item.TenantID + "|" + item.Key
+	}
+	return item.Key
+}
 
 func hasAllTags(itemTags, required []string) bool {
 	set := map[string]struct{}{}

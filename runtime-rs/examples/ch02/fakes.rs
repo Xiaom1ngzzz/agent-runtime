@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -17,6 +17,7 @@ use agent_runtime_rs::executor::{Executor, ExecutorError};
 use agent_runtime_rs::llm::{LLMError, LLMProvider};
 use agent_runtime_rs::prompt::{Messages, PromptCompiler, PromptError};
 use agent_runtime_rs::runtime::Runtime;
+use agent_runtime_rs::state::snapshot::clone_view;
 use agent_runtime_rs::state::{EventStore, State, StateError};
 
 // ---------- EventStore ----------
@@ -25,11 +26,24 @@ pub struct EventStoreFake {
     events: Vec<Event>,
     next_id: usize,
     seq_by: HashMap<String, i64>,
+    command_seen: HashMap<String, HashSet<String>>,
+}
+
+/// 乐观并发与命令幂等选项(ADR-006)。
+#[derive(Debug, Clone, Default)]
+pub struct AppendOpts {
+    pub expected_seq: i64,
+    pub command_id: String,
 }
 
 impl EventStoreFake {
     pub fn new() -> Self {
-        Self { events: Vec::new(), next_id: 0, seq_by: HashMap::new() }
+        Self {
+            events: Vec::new(),
+            next_id: 0,
+            seq_by: HashMap::new(),
+            command_seen: HashMap::new(),
+        }
     }
     pub fn snapshot(&self) -> Vec<Event> {
         self.events.clone()
@@ -38,6 +52,47 @@ impl EventStoreFake {
 
 impl EventStore for EventStoreFake {
     fn append(&mut self, events: &mut [Event]) -> Result<(), StateError> {
+        self.append_with_opts(events, AppendOpts::default())
+    }
+    fn load(&self, session_id: &str) -> Result<Vec<Event>, StateError> {
+        self.load_from(session_id, 0)
+    }
+    fn load_from(&self, session_id: &str, from_seq: i64) -> Result<Vec<Event>, StateError> {
+        Ok(self
+            .events
+            .iter()
+            .filter(|e| e.session_id == session_id && e.seq > from_seq)
+            .cloned()
+            .collect())
+    }
+}
+
+impl EventStoreFake {
+    pub fn append_with_opts(
+        &mut self,
+        events: &mut [Event],
+        opts: AppendOpts,
+    ) -> Result<(), StateError> {
+        if events.is_empty() {
+            return Ok(());
+        }
+        let sid = events[0].session_id.clone();
+        if opts.expected_seq > 0 && self.seq_by.get(&sid).copied().unwrap_or(0) != opts.expected_seq
+        {
+            return Err(StateError(format!(
+                "optimistic concurrency: expected seq {}, current {}",
+                opts.expected_seq,
+                self.seq_by.get(&sid).copied().unwrap_or(0)
+            )));
+        }
+        if !opts.command_id.is_empty()
+            && self
+                .command_seen
+                .get(&sid)
+                .is_some_and(|seen| seen.contains(&opts.command_id))
+        {
+            return Ok(());
+        }
         for e in events.iter_mut() {
             if e.id.is_empty() {
                 self.next_id += 1;
@@ -55,18 +110,13 @@ impl EventStore for EventStoreFake {
             }
             self.events.push(e.clone());
         }
+        if !opts.command_id.is_empty() {
+            self.command_seen
+                .entry(sid)
+                .or_default()
+                .insert(opts.command_id);
+        }
         Ok(())
-    }
-    fn load(&self, session_id: &str) -> Result<Vec<Event>, StateError> {
-        self.load_from(session_id, 0)
-    }
-    fn load_from(&self, session_id: &str, from_seq: i64) -> Result<Vec<Event>, StateError> {
-        Ok(self
-            .events
-            .iter()
-            .filter(|e| e.session_id == session_id && e.seq > from_seq)
-            .cloned()
-            .collect())
     }
 }
 
@@ -93,12 +143,25 @@ impl agent_runtime_rs::state::RecoverableState for StateFake {
     fn load_snapshot(&mut self, session_id: &str, view: SessionView) {
         self.views.insert(session_id.into(), view);
     }
+    fn reset_session(&mut self, session_id: &str) {
+        self.views.remove(session_id);
+    }
 }
 
 impl State for StateFake {
     fn apply(&mut self, events: &[Event]) -> Result<(), StateError> {
+        if events.is_empty() {
+            return Ok(());
+        }
+        let mut working: HashMap<String, SessionView> = HashMap::new();
         for e in events {
-            let view = self.views.entry(e.session_id.clone()).or_insert_with(SessionView::default);
+            let view = working.entry(e.session_id.clone()).or_insert_with(|| {
+                if let Some(cur) = self.views.get(&e.session_id) {
+                    clone_view(cur)
+                } else {
+                    SessionView::default()
+                }
+            });
             check_invariants(view, e)?;
             apply_one(view, e);
             if e.seq > view.max_seq {
@@ -108,12 +171,15 @@ impl State for StateFake {
                 view.seen_ids.insert(e.id.clone());
             }
         }
+        for (sid, view) in working {
+            self.views.insert(sid, view);
+        }
         Ok(())
     }
     fn view(&self, session_id: &str) -> Result<SessionView, StateError> {
         self.views
             .get(session_id)
-            .cloned()
+            .map(clone_view)
             .ok_or_else(|| StateError(format!("no view for session {}", session_id)))
     }
 }
@@ -130,7 +196,8 @@ fn check_invariants(view: &SessionView, e: &Event) -> Result<(), StateError> {
             e.seq, view.max_seq, e.id
         )));
     }
-    if !e.caused_by.is_empty() && !view.seen_ids.is_empty() && !view.seen_ids.contains(&e.caused_by) {
+    if !e.caused_by.is_empty() && !view.seen_ids.is_empty() && !view.seen_ids.contains(&e.caused_by)
+    {
         return Err(StateError(format!(
             "event {} references unknown caused_by={}",
             e.id, e.caused_by
@@ -196,12 +263,14 @@ fn apply_one(view: &mut SessionView, e: &Event) {
                     task_id: e.task_id.clone(),
                     index: p.index,
                     status: TurnStatus::Running,
+                    start_seq: e.seq,
                     ..Default::default()
                 },
             );
         }
         EventPayload::TurnEnded(p) => {
             let mut index = 0i32;
+            let mut from_seq = e.seq;
             if let Some(t) = view.last_turn.get_mut(&e.task_id) {
                 t.status = p.status;
                 t.tokens_in = p.tokens_in;
@@ -209,13 +278,15 @@ fn apply_one(view: &mut SessionView, e: &Event) {
                 t.cost_us = p.cost_us;
                 t.latency_ms = p.latency_ms;
                 index = t.index;
+                if t.start_seq > 0 {
+                    from_seq = t.start_seq;
+                }
             }
-            // ch04: 追加 TurnDigest 到 WorkingSet(§4.4.1)。
             view.working_set.push(TurnDigest {
                 turn_id: e.turn_id.clone(),
                 task_id: e.task_id.clone(),
                 index,
-                from_seq: e.seq,
+                from_seq,
                 to_seq: e.seq,
                 superseded: false,
             });
@@ -230,7 +301,8 @@ fn apply_one(view: &mut SessionView, e: &Event) {
             }
         }
         EventPayload::ProgressUpdated(p) => {
-            view.progresses.insert(p.task_id.clone(), p.progress.clone());
+            view.progresses
+                .insert(p.task_id.clone(), p.progress.clone());
         }
         EventPayload::MemoryQueried(p) => {
             view.memory_refs.extend(p.refs.iter().cloned());
@@ -251,8 +323,16 @@ pub struct ContextEngineFake {
 }
 
 impl ContextEngineFake {
-    pub fn new(state: Arc<Mutex<StateFake>>, store: Arc<Mutex<EventStoreFake>>, tools: Vec<Tool>) -> Self {
-        Self { state, store, tools }
+    pub fn new(
+        state: Arc<Mutex<StateFake>>,
+        store: Arc<Mutex<EventStoreFake>>,
+        tools: Vec<Tool>,
+    ) -> Self {
+        Self {
+            state,
+            store,
+            tools,
+        }
     }
 }
 
@@ -267,7 +347,12 @@ impl ContextEngine for ContextEngineFake {
         if !task_id.is_empty() && !view.tasks.contains_key(task_id) {
             return Err(ContextError(format!("task {task_id} not in SessionView")));
         }
-        let events = self.store.lock().unwrap().load(session_id).map_err(|e| ContextError(e.0))?;
+        let events = self
+            .store
+            .lock()
+            .unwrap()
+            .load(session_id)
+            .map_err(|e| ContextError(e.0))?;
         let mut msgs = vec![Message {
             role: "system".into(),
             content: "you are an agent.".into(),
@@ -329,7 +414,10 @@ pub struct LLMScript {
 
 impl LLMScript {
     pub fn new(script: Vec<LLMResponse>) -> Self {
-        Self { script, idx: Mutex::new(0) }
+        Self {
+            script,
+            idx: Mutex::new(0),
+        }
     }
 }
 
@@ -356,7 +444,10 @@ pub struct ExecutorFake {
 
 impl ExecutorFake {
     pub fn new(store: Arc<Mutex<EventStoreFake>>, tools: HashMap<String, ToolFn>) -> Self {
-        Self { store, tools: Mutex::new(tools) }
+        Self {
+            store,
+            tools: Mutex::new(tools),
+        }
     }
 }
 
@@ -394,10 +485,14 @@ impl Executor for ExecutorFake {
             let payload = match tools.get(&call.name) {
                 Some(fn_) => match fn_(&call.arguments) {
                     Ok(content) => PayloadToolReturned {
-                        call_id: call.id.clone(), content, is_error: false,
+                        call_id: call.id.clone(),
+                        content,
+                        is_error: false,
                     },
                     Err(err) => PayloadToolReturned {
-                        call_id: call.id.clone(), content: err, is_error: true,
+                        call_id: call.id.clone(),
+                        content: err,
+                        is_error: true,
                     },
                 },
                 None => PayloadToolReturned {

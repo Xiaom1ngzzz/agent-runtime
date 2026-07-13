@@ -32,11 +32,27 @@ jobs:
 
       - name: Test Go reference implementation
         working-directory: runtime-go
-        run: go test ./...
+        run: go test -race ./...
+
+      - name: Go fmt check
+        working-directory: runtime-go
+        run: test -z "$(gofmt -l .)"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Test Rust reference implementation
         working-directory: runtime-rs
-        run: cargo test --all-targets
+        run: cargo test --locked --all-targets
+
+      - name: Rust fmt check
+        working-directory: runtime-rs
+        run: cargo fmt --check
+
+      - name: Rust clippy
+        working-directory: runtime-rs
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: Install MkDocs Material
         run: pip install -r requirements.txt

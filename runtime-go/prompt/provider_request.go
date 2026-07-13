@@ -9,7 +9,7 @@ import "agent-runtime-go/domain"
 // AnthropicRequest 近似 Anthropic Messages API 的请求体。
 type AnthropicRequest struct {
 	Model    string
-	System   string            // 独立字段,不进 messages 数组
+	System   string // 独立字段,不进 messages 数组
 	Messages []AnthropicMessage
 	Tools    []AnthropicTool
 }
@@ -20,12 +20,12 @@ type AnthropicMessage struct {
 }
 
 type AnthropicContent struct {
-	Type       string // "text" | "tool_use" | "tool_result"
-	Text       string // for type=text
-	ToolUseID  string // for type=tool_use / tool_result
-	ToolName   string // for type=tool_use
-	ToolInput  string // for type=tool_use, JSON 字符串
-	Content    string // for type=tool_result, 结果内容
+	Type      string // "text" | "tool_use" | "tool_result"
+	Text      string // for type=text
+	ToolUseID string // for type=tool_use / tool_result
+	ToolName  string // for type=tool_use
+	ToolInput string // for type=tool_use, JSON 字符串
+	Content   string // for type=tool_result, 结果内容
 }
 
 type AnthropicTool struct {
@@ -42,15 +42,15 @@ type OpenAIRequest struct {
 }
 
 type OpenAIMessage struct {
-	Role       string           // "system" | "user" | "assistant" | "tool"
+	Role       string // "system" | "user" | "assistant" | "tool"
 	Content    string
 	ToolCalls  []OpenAIToolCall // assistant 消息里的工具调用
 	ToolCallID string           // role=tool 时对齐上一条 tool_calls[i].id
 }
 
 type OpenAIToolCall struct {
-	ID   string
-	Type string // "function"
+	ID       string
+	Type     string // "function"
 	Function OpenAIFunction
 }
 
@@ -60,7 +60,7 @@ type OpenAIFunction struct {
 }
 
 type OpenAITool struct {
-	Type     string           // "function"
+	Type     string // "function"
 	Function OpenAIFunctionDef
 }
 

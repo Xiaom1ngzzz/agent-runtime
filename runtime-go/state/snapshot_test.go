@@ -27,7 +27,12 @@ func TestSnapshotReplay(t *testing.T) {
 	rt := newRuntimeCh02Scenario()
 
 	const sid, tid = "s1", "t1"
-	must := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	// ---- 追加系统级 Event ----
 	must(appendAll(rt, sid, "", "",
@@ -106,7 +111,12 @@ func TestSnapshotReplay(t *testing.T) {
 func TestSnapshotReplay_SeqRegression(t *testing.T) {
 	st := memfakes.NewState()
 	const sid = "s1"
-	must := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	must(st.Apply([]domain.Event{
 		{ID: "e01", SessionID: sid, Type: domain.EvtSessionOpened, Seq: 1,

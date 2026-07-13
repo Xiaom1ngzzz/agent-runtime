@@ -17,3 +17,10 @@ type EventStore interface {
 	// fromSeq=0 等价于 Load(sessionID)。用于 §3.6 Snapshot 恢复。
 	LoadFrom(sessionID string, fromSeq int64) ([]domain.Event, error)
 }
+
+// AppendOpts 乐观并发与命令幂等选项(见 ADR-006)。
+// 参考实现见 memfakes.EventStore.AppendWithOpts。
+type AppendOpts struct {
+	ExpectedSeq int64
+	CommandID   string
+}

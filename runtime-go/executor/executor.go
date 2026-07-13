@@ -78,7 +78,7 @@ func NewToolExecutor(store state.EventStore, reg *Registry) *ToolExecutor {
 }
 
 func (x *ToolExecutor) Run(ctx stdcontext.Context, turn domain.Turn) ([]domain.Event, error) {
-	calls, err := x.loadToolCalls(turn.ID)
+	calls, err := x.loadToolCalls(turn)
 	if err != nil {
 		return nil, err
 	}
@@ -91,19 +91,23 @@ func (x *ToolExecutor) Run(ctx stdcontext.Context, turn domain.Turn) ([]domain.E
 	return x.runSequential(ctx, calls)
 }
 
-func (x *ToolExecutor) loadToolCalls(turnID string) ([]domain.ToolCall, error) {
+func (x *ToolExecutor) loadToolCalls(turn domain.Turn) ([]domain.ToolCall, error) {
 	var all []domain.Event
 	if x.Snapshots != nil {
 		all = x.Snapshots.Snapshot()
 	} else if s, ok := x.Store.(snapshotSource); ok {
 		all = s.Snapshot()
 	} else {
-		// 无 Snapshot 时退化为全量 Load —— 调用方应保证 Store 可按 session 过滤;
-		// Round 2 测试走 memfakes,总有 Snapshot。
 		return nil, errors.New("executor: EventStore does not expose Snapshot; set ToolExecutor.Snapshots")
 	}
 	for i := len(all) - 1; i >= 0; i-- {
-		if all[i].TurnID != turnID {
+		if all[i].TurnID != turn.ID {
+			continue
+		}
+		if turn.SessionID != "" && all[i].SessionID != turn.SessionID {
+			continue
+		}
+		if turn.TaskID != "" && all[i].TaskID != turn.TaskID {
 			continue
 		}
 		if p, ok := all[i].Payload.(domain.PayloadLLMReplied); ok {
@@ -143,6 +147,15 @@ func (x *ToolExecutor) runParallel(ctx stdcontext.Context, calls []domain.ToolCa
 		out = append(out, evs...)
 	}
 	return out, nil
+}
+
+const maxToolOutputBytes = 64 * 1024
+
+func truncateToolOutput(s string) string {
+	if len(s) <= maxToolOutputBytes {
+		return s
+	}
+	return s[:maxToolOutputBytes] + "…[truncated]"
 }
 
 func (x *ToolExecutor) dispatchOne(ctx stdcontext.Context, call domain.ToolCall) []domain.Event {
@@ -191,6 +204,7 @@ func (x *ToolExecutor) dispatchOne(ctx stdcontext.Context, call domain.ToolCall)
 			},
 		}
 	}
+	content = truncateToolOutput(content)
 	return []domain.Event{
 		called,
 		{

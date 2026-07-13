@@ -2,18 +2,15 @@
 //!
 //! 参见 ch03 §3.3.2 与 §3.7.1:
 //!   - `EventWire` 是"落盘/传输"用的 DTO,与 `domain::Event` 一一对齐;
-//!   - `EventPayload` 已通过 `#[serde(tag="type", content="payload")]` 内置了分派,
-//!     Rust 侧无需 factory 表——新增 variant 忘了在 `event_payloads.rs` 里加,编译不过;
-//!   - 时间戳走 RFC3339 字符串,兼容跨语言比对(Go 用 `time.Time`)。
+//!   - `EventPayload` 已通过 `#[serde(tag="type", content="payload")]` 内置了分派;
+//!   - 时间戳走 RFC3339 字符串 `ts`,与 Go `time.Time` JSON 互操作。
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::{Event, EventPayload};
 
 /// 与 Go 版 `EventDTO` 对齐的 wire-format 表示。
-///
-/// `payload` 展平后带 `type` + `payload` 两个字段(见 `EventPayload` 的 serde attr),
-/// 使得 wire 层的 JSON 与 Go 版完全一致。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventWire {
     pub id: String,
@@ -22,8 +19,11 @@ pub struct EventWire {
     pub task_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub turn_id: String,
-    #[serde(default)]
-    pub ts_millis: i64, // RFC3339 折衷:先用 epoch millis,跨语言比对最直接。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ts: Option<DateTime<Utc>>,
+    /// 读兼容:旧 fixture 可能仍带 `ts_millis`。
+    #[serde(default, rename = "ts_millis", skip_serializing)]
+    pub ts_millis_legacy: i64,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub caused_by: String,
     #[serde(default)]
@@ -34,17 +34,18 @@ pub struct EventWire {
 
 impl From<&Event> for EventWire {
     fn from(e: &Event) -> Self {
-        let ts_millis = e
-            .ts
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|d| d.as_millis() as i64)
-            .unwrap_or(0);
+        let ts = e.ts.and_then(|t| {
+            t.duration_since(std::time::UNIX_EPOCH)
+                .ok()
+                .map(|d| DateTime::from_timestamp(d.as_secs() as i64, d.subsec_nanos()))
+        }).flatten();
         EventWire {
             id: e.id.clone(),
             session_id: e.session_id.clone(),
             task_id: e.task_id.clone(),
             turn_id: e.turn_id.clone(),
-            ts_millis,
+            ts,
+            ts_millis_legacy: 0,
             caused_by: e.caused_by.clone(),
             seq: e.seq,
             payload: e.payload.clone(),
@@ -54,9 +55,14 @@ impl From<&Event> for EventWire {
 
 impl From<EventWire> for Event {
     fn from(w: EventWire) -> Self {
-        let ts = if w.ts_millis > 0 {
+        let ts = if let Some(dt) = w.ts {
+            std::time::UNIX_EPOCH.checked_add(std::time::Duration::new(
+                dt.timestamp() as u64,
+                dt.timestamp_subsec_nanos(),
+            ))
+        } else if w.ts_millis_legacy > 0 {
             std::time::UNIX_EPOCH
-                .checked_add(std::time::Duration::from_millis(w.ts_millis as u64))
+                .checked_add(std::time::Duration::from_millis(w.ts_millis_legacy as u64))
         } else {
             None
         };
@@ -109,7 +115,6 @@ mod tests {
         assert_eq!(got.session_id, original.session_id);
         assert_eq!(got.seq, original.seq);
         assert_eq!(got.caused_by, original.caused_by);
-        // Payload equality via debug 是最简单的可比较方式(EventPayload 未派生 PartialEq)。
         assert_eq!(format!("{:?}", got.payload), format!("{:?}", original.payload));
     }
 
@@ -186,7 +191,37 @@ mod tests {
     fn unknown_type_is_reported() {
         let raw = br#"{"id":"e1","session_id":"s1","type":"FutureEvent","payload":{}}"#;
         let err = unmarshal_event(raw).unwrap_err();
-        // serde 会报未知 variant——wire 层如实透传;State 层再决定策略(§3.5.3)。
         assert!(err.to_string().contains("FutureEvent") || err.to_string().contains("unknown"));
+    }
+
+    #[test]
+    fn cross_lang_fixture_user_spoke() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../fixtures/wire/user_spoke.json");
+        let data = std::fs::read(&path).expect("read fixture");
+        let got = unmarshal_event(&data).expect("unmarshal shared fixture");
+        assert_eq!(got.id, "e01");
+        assert_eq!(got.session_id, "s-cross");
+        assert_eq!(got.seq, 1);
+        match got.payload {
+            EventPayload::UserSpoke(p) => assert_eq!(p.text, "hello 世界"),
+            other => panic!("unexpected payload: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn partial_payload_defaults_to_zero_values() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../fixtures/wire/task_created_partial_payload.json");
+        let data = std::fs::read(&path).expect("read fixture");
+        let got = unmarshal_event(&data).expect("partial payload should deserialize");
+        match got.payload {
+            EventPayload::TaskCreated(p) => {
+                assert_eq!(p.goal, "查天气");
+                assert_eq!(p.budget.max_tokens, 0);
+                assert!(p.parent_id.is_empty());
+            }
+            other => panic!("unexpected payload: {:?}", other),
+        }
     }
 }

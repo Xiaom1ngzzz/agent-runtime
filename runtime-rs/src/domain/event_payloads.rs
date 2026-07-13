@@ -84,13 +84,17 @@ impl EventPayload {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadSessionOpened {
+    #[serde(default)]
     pub principal: String,
+    #[serde(default)]
     pub metadata: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadTaskCreated {
+    #[serde(default)]
     pub goal: String,
+    #[serde(default)]
     pub budget: Budget,
     #[serde(default)]
     pub parent_id: String,
@@ -98,98 +102,139 @@ pub struct PayloadTaskCreated {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadTaskEnded {
+    #[serde(default)]
     pub status: TaskStatus,
+    #[serde(default)]
     pub reason: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadTurnStarted {
+    #[serde(default)]
     pub index: i32,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadTurnEnded {
+    #[serde(default)]
     pub status: TurnStatus,
+    #[serde(default)]
     pub tokens_in: i64,
+    #[serde(default)]
     pub tokens_out: i64,
+    #[serde(default)]
     pub cost_us: f64,
+    #[serde(default)]
     pub latency_ms: i64,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadUserSpoke {
+    #[serde(default)]
     pub text: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadLLMRequested {
+    #[serde(default)]
     pub model: String,
+    #[serde(default)]
     pub messages: Vec<Message>,
+    #[serde(default)]
     pub tools: Vec<Tool>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadLLMReplied {
+    #[serde(default)]
     pub assistant: Message,
+    #[serde(default)]
     pub tool_calls: Vec<ToolCall>,
+    #[serde(default)]
     pub tokens_in: i64,
+    #[serde(default)]
     pub tokens_out: i64,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadToolCalled {
+    #[serde(default)]
     pub call_id: String,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub arguments: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadToolReturned {
+    #[serde(default)]
     pub call_id: String,
+    #[serde(default)]
     pub content: String,
+    #[serde(default)]
     pub is_error: bool,
 }
 
 /// 与 Go 版 `PayloadContextCompressed` 对齐。见 ch04 §4.5.3。
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadContextCompressed {
+    #[serde(default)]
     pub from_seq: i64,
+    #[serde(default)]
     pub to_seq: i64,
+    #[serde(default)]
     pub strategy: String,
+    #[serde(default)]
     pub summary: Summary,
+    #[serde(default)]
     pub from_tokens: i64,
+    #[serde(default)]
     pub to_tokens: i64,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadCompressionSkipped {
+    #[serde(default)]
     pub reason: String,
+    #[serde(default)]
     pub detail: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadProgressUpdated {
+    #[serde(default)]
     pub task_id: String,
+    #[serde(default)]
     pub progress: Progress,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadMemoryQueried {
+    #[serde(default)]
     pub query: String,
+    #[serde(default)]
     pub refs: Vec<MemoryRef>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadSubTaskSpawned {
+    #[serde(default)]
     pub parent_task_id: String,
+    #[serde(default)]
     pub child_task_id: String,
+    #[serde(default)]
     pub goal: String,
+    #[serde(default)]
     pub budget: Budget,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PayloadToolBindFailed {
+    #[serde(default)]
     pub call_id: String,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub reason: String,
 }

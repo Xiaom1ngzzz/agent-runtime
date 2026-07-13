@@ -158,14 +158,34 @@ func (p *GraphPlanner) spawnChildren(parent domain.Task, goals []string) []domai
 
 func distributedBudget(parent domain.Budget, childCount, index int) domain.Budget {
 	out := parent
-	out.MaxTokens = 0
-	if parent.MaxTokens > 0 && childCount > 0 {
-		out.MaxTokens = parent.MaxTokens / childCount
-		if index < parent.MaxTokens%childCount {
-			out.MaxTokens++
-		}
-	}
+	out.MaxTokens = distributeInt(parent.MaxTokens, childCount, index)
+	out.MaxCostUS = distributeFloat(parent.MaxCostUS, childCount, index)
+	// MaxWallMS 继承父任务的绝对截止时间(共享墙钟上限),不按子任务数倍增。
 	return out
+}
+
+func distributeInt(total, n, index int) int {
+	if total <= 0 || n <= 0 {
+		return 0
+	}
+	share := total / n
+	if index < total%n {
+		share++
+	}
+	return share
+}
+
+func distributeFloat(total float64, n, index int) float64 {
+	if total <= 0 || n <= 0 {
+		return 0
+	}
+	// 按 index 均分,余数给前几个子任务(与 MaxTokens 同策略,以整数分计)。
+	units := int(total*1000 + 0.5)
+	share := float64(units/n) / 1000
+	if index < units%n {
+		share += 0.001
+	}
+	return share
 }
 
 func progressContentEqual(a, b domain.Progress) bool {
@@ -255,6 +275,15 @@ func (SagaCoordinator) OnChildEnded(view domain.SessionView, parentID string) ([
 	children := g.ChildrenOf(parentID)
 	if len(children) == 0 {
 		return nil, nil
+	}
+	expected := len(SplitGoals(parent.Goal))
+	if expected >= 2 && len(children) < expected {
+		return nil, nil // 规划未完成,禁止提前关父
+	}
+	for _, cid := range children {
+		if ct, ok := view.Tasks[cid]; ok && ct.Status == domain.TaskPending {
+			return nil, nil
+		}
 	}
 	allDone := true
 	anyFailed := false

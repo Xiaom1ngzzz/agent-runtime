@@ -16,26 +16,54 @@ import (
 	"agent-runtime-go/executor"
 	"agent-runtime-go/llm"
 	"agent-runtime-go/prompt"
+	"agent-runtime-go/state"
 )
 
 // ---------- EventStore ----------
 
+// AppendOpts 乐观并发与命令幂等选项(见 ADR-006)。
+type AppendOpts struct {
+	ExpectedSeq int64  // 非 0 时要求当前 seq 等于该值
+	CommandID   string // 非空时同 session 内去重
+}
+
 // EventStore 是最小可行的内存实现：全局 mutex 兜底，每 session 独立 seq 计数。
 // ch03 §3.4.3 L1 档次;生产实现见 ch09 讨论。
 type EventStore struct {
-	mu     sync.Mutex
-	events []domain.Event
-	nextID int
-	seqBy  map[string]int64 // sessionID -> next seq;从 1 开始
+	mu          sync.Mutex
+	events      []domain.Event
+	nextID      int
+	seqBy       map[string]int64 // sessionID -> next seq;从 1 开始
+	commandSeen map[string]map[string]bool
 }
 
-func NewEventStore() *EventStore { return &EventStore{seqBy: map[string]int64{}} }
+func NewEventStore() *EventStore {
+	return &EventStore{seqBy: map[string]int64{}, commandSeen: map[string]map[string]bool{}}
+}
 
 // Append 按 ch03 §3.4.2 契约:同 session 内 seq 严格单调递增,由 store 分配;
 // id 若为空由 store 分配为 "eNN"。Turn 内的多条 event 会拿到连续 seq。
 func (s *EventStore) Append(events []domain.Event) error {
+	return s.AppendWithOpts(events, AppendOpts{})
+}
+
+// AppendWithOpts 支持 expected_seq 乐观并发与 command_id 幂等(ADR-006)。
+func (s *EventStore) AppendWithOpts(events []domain.Event, opts AppendOpts) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if len(events) == 0 {
+		return nil
+	}
+	sid := events[0].SessionID
+	if opts.ExpectedSeq > 0 && s.seqBy[sid] != opts.ExpectedSeq {
+		return fmt.Errorf("optimistic concurrency: expected seq %d, current %d", opts.ExpectedSeq, s.seqBy[sid])
+	}
+	if opts.CommandID != "" {
+		seen := s.commandSeen[sid]
+		if seen != nil && seen[opts.CommandID] {
+			return nil
+		}
+	}
 	for i := range events {
 		if events[i].ID == "" {
 			s.nextID++
@@ -52,6 +80,12 @@ func (s *EventStore) Append(events []domain.Event) error {
 			events[i].TS = time.Now().UTC()
 		}
 		s.events = append(s.events, events[i])
+	}
+	if opts.CommandID != "" {
+		if s.commandSeen[sid] == nil {
+			s.commandSeen[sid] = map[string]bool{}
+		}
+		s.commandSeen[sid][opts.CommandID] = true
 	}
 	return nil
 }
@@ -102,19 +136,28 @@ type State struct {
 func NewState() *State { return &State{views: map[string]*domain.SessionView{}} }
 
 // Apply 折入 Event。按 ch03 §3.5.4 校验:seq 严格递增、caused_by 已见、session_id 匹配。
-// 违反不变量 = 事件流已损坏,立刻拒绝(§3.8)。
+// 整批预验证后再应用,避免前缀部分生效(§3.8)。
 func (s *State) Apply(events []domain.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if len(events) == 0 {
+		return nil
+	}
+	working := make(map[string]*domain.SessionView, 1)
 	for _, e := range events {
-		v := s.views[e.SessionID]
+		v := working[e.SessionID]
 		if v == nil {
-			v = &domain.SessionView{
-				Tasks:    map[string]domain.Task{},
-				LastTurn: map[string]domain.Turn{},
-				SeenIDs:  map[string]bool{},
+			if cur := s.views[e.SessionID]; cur != nil {
+				cloned := state.CloneView(*cur)
+				v = &cloned
+			} else {
+				v = &domain.SessionView{
+					Tasks:    map[string]domain.Task{},
+					LastTurn: map[string]domain.Turn{},
+					SeenIDs:  map[string]bool{},
+				}
 			}
-			s.views[e.SessionID] = v
+			working[e.SessionID] = v
 		}
 		if err := checkInvariants(v, e); err != nil {
 			return err
@@ -129,6 +172,9 @@ func (s *State) Apply(events []domain.Event) error {
 		if e.ID != "" {
 			v.SeenIDs[e.ID] = true
 		}
+	}
+	for sid, v := range working {
+		s.views[sid] = v
 	}
 	return nil
 }
@@ -156,11 +202,10 @@ func (s *State) View(sessionID string) (domain.SessionView, error) {
 	if v == nil {
 		return domain.SessionView{}, fmt.Errorf("no view for session %s", sessionID)
 	}
-	return *v, nil
+	return state.CloneView(*v), nil
 }
 
 // LoadSnapshot 把一份已折叠的 View 作为初始状态注入,用于 §3.6.3 的恢复流程。
-// 与 State 层其他 API 的关系:Apply 之后传进来的 events 应该是快照 seq 之后的增量。
 func (s *State) LoadSnapshot(sessionID string, view domain.SessionView) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -180,6 +225,13 @@ func (s *State) LoadSnapshot(sessionID string, view domain.SessionView) {
 		view.Progresses = map[string]domain.Progress{}
 	}
 	s.views[sessionID] = &view
+}
+
+// ResetSession 清空指定 session 的折叠视图,Recover 全量 replay 前调用。
+func (s *State) ResetSession(sessionID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.views, sessionID)
 }
 
 func applyOne(v *domain.SessionView, e domain.Event) {
@@ -211,7 +263,10 @@ func applyOne(v *domain.SessionView, e domain.Event) {
 		t.EndedAt = e.TS
 		v.Tasks[e.TaskID] = t
 	case domain.PayloadTurnStarted:
-		v.LastTurn[e.TaskID] = domain.Turn{ID: e.TurnID, TaskID: e.TaskID, Index: p.Index, Status: domain.TurnRunning}
+		v.LastTurn[e.TaskID] = domain.Turn{
+			ID: e.TurnID, TaskID: e.TaskID, Index: p.Index,
+			Status: domain.TurnRunning, StartSeq: e.Seq,
+		}
 	case domain.PayloadTurnEnded:
 		t := v.LastTurn[e.TaskID]
 		t.Status = p.Status
@@ -220,11 +275,13 @@ func applyOne(v *domain.SessionView, e domain.Event) {
 		t.CostUS = p.CostUS
 		t.LatencyMS = p.LatencyMS
 		v.LastTurn[e.TaskID] = t
-		// ch04: 追加 TurnDigest 到 WorkingSet(§4.4.1)。
+		fromSeq := t.StartSeq
+		if fromSeq == 0 {
+			fromSeq = e.Seq
+		}
 		v.WorkingSet = append(v.WorkingSet, domain.TurnDigest{
 			TurnID: e.TurnID, TaskID: e.TaskID, Index: t.Index,
-			// FromSeq/ToSeq 由更完善的实现填,这里用 e.Seq 兜底
-			FromSeq: e.Seq, ToSeq: e.Seq,
+			FromSeq: fromSeq, ToSeq: e.Seq,
 		})
 	case domain.PayloadContextCompressed:
 		// ch04 §4.5.3: 存 Summary + mark 覆盖的 TurnDigest 为 Superseded。
@@ -386,13 +443,13 @@ func (x *Executor) Run(_ stdctx.Context, turn domain.Turn) ([]domain.Event, erro
 		content, err := fn(call.Arguments)
 		if err != nil {
 			out = append(out, domain.Event{
-				Type: domain.EvtToolReturned,
+				Type:    domain.EvtToolReturned,
 				Payload: domain.PayloadToolReturned{CallID: call.ID, IsError: true, Content: err.Error()},
 			})
 			continue
 		}
 		out = append(out, domain.Event{
-			Type: domain.EvtToolReturned,
+			Type:    domain.EvtToolReturned,
 			Payload: domain.PayloadToolReturned{CallID: call.ID, Content: content},
 		})
 	}

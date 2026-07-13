@@ -12,6 +12,8 @@
 
 副作用回放(ch02 §2.7)原则不变:**`Recover` 本身只 Fold,不重跑工具**。不过 ch08 的一次性 Executor 仍存在"外部成功、结果未落库"窗口;Checkpoint 不能独自提供 exactly-once,生产上需幂等键或 outbox。
 
+**`Recover` 要求传入 fresh/空的 State 实例**——不得在已有 Session 视图上叠加恢复;协调器应先 `NewState()` 或显式 `Reset(sessionID)`,再调用 `Recover`。
+
 ---
 
 ## 9.2 概念:Checkpoint = Snapshot + 元数据
@@ -39,7 +41,7 @@ Checkpoint {
 
 ### 9.3.1 深拷贝
 
-`cloneSnap` 必须覆盖 ch04 字段:`WorkingSet`、`Summaries`、`MemoryRefs`、`Progresses`,并隔离其中的嵌套 slice/map。内存 Store 在 Save 和 Latest 两侧都返回独立副本。
+`cloneSnap` 必须覆盖 ch04 字段:`WorkingSet`、`Summaries`、`MemoryRefs`、`Progresses`,并隔离其中的嵌套 slice/map。**深拷贝边界**:Checkpoint 保存的是 `SessionView` 投影,不含 EventStore 原文;恢复后 Project 仍须从 EventStore 按 WorkingSet 展开消息。内存 Store 在 Save 和 Latest 两侧都返回独立副本。
 
 ### 9.3.2 Schema 不匹配
 

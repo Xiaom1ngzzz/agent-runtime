@@ -60,7 +60,7 @@ const (
 	StepToolCall   StepKind = "tool_call"
 	StepUserInput  StepKind = "user_input"
 	StepError      StepKind = "error"
-	StepReadOnly   StepKind = "read_only" // 可丢
+	StepReadOnly   StepKind = "read_only"  // 可丢
 	StepAggregated StepKind = "aggregated" // "批量查 20 个订单" 这类聚合节点
 )
 
@@ -77,16 +77,16 @@ type TurnDigest struct {
 	TurnID     string
 	TaskID     string
 	Index      int
-	FromSeq    int64  // 该 Turn 覆盖的 seq 起点
-	ToSeq      int64  // 该 Turn 覆盖的 seq 终点
-	Superseded bool   // 若已被 ContextCompressed 覆盖，Assemble 时跳过原文
+	FromSeq    int64 // 该 Turn 覆盖的 seq 起点
+	ToSeq      int64 // 该 Turn 覆盖的 seq 终点
+	Superseded bool  // 若已被 ContextCompressed 覆盖，Assemble 时跳过原文
 }
 
 // MemoryRef 是从 Memory 层查回来的相关片段。ch05 展开；ch04 只存字段。
 type MemoryRef struct {
-	Source   string // "vector:kb.docs" | "kv:facts" | ...
-	Key      string
-	Content  string
-	Score    float64
+	Source       string // "vector:kb.docs" | "kv:facts" | ...
+	Key          string
+	Content      string
+	Score        float64
 	QueriedAtSeq int64
 }

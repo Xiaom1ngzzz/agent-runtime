@@ -52,9 +52,11 @@ type Budget struct {
 // 覆盖 LLM 调用 + 由此触发的所有工具调用 + 状态更新。
 type Turn struct {
 	ID        string
+	SessionID string
 	TaskID    string
 	Index     int
 	Status    TurnStatus
+	StartSeq  int64 // TurnStarted 事件的 seq；TurnEnded 时用于 WorkingSet.FromSeq
 	TokensIn  int
 	TokensOut int
 	CostUS    float64

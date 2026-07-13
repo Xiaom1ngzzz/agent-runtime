@@ -21,7 +21,7 @@ ADR-003 明确暂缓 Saga / Process Manager,触发条件是"ch07 引入 sub-Task
 1. **Task 通过 `ParentID` 表达树**(Round 2 不做任意 DAG 边)。图由 `SessionView.Tasks` 派生,不单独存边表。参考构建器只做投影,不会自动拒绝 orphan、self-parent 或 cycle;生产写入边界必须校验这些不变量。
 2. **Planner** 负责产出 `SubTaskSpawned` / `TaskCreated{ParentID}` / `ProgressUpdated`,是 Domain Service。
 3. **SagaCoordinator** 扮演 Process Manager:观察子 Task 终态,追加父 `TaskEnded`。Round 2 只做汇合,不做补偿事务。
-4. **预算继承**:子 Task 按商和余数分配父 `MaxTokens`,总和不超过父预算;其它 Budget 字段拷贝。级联取消留扩展。
+4. **预算继承**:子 Task 继承父 `Budget` 全字段(`MaxTokens`、`MaxCostUS`、`MaxWallMS`);`MaxTokens` 按商和余数分配,`MaxCostUS`/`MaxWallMS` 同样均分(余数给前几个子任务),总和不超过父预算。级联取消留扩展。
 
 ## Consequences
 

@@ -11,8 +11,8 @@
 - `ROADMAP.md` — 全书大纲与进度。
 - `chapters/` — 章节正文。
 - `adr/` — 架构决策记录。
-- `runtime-go/` — Go 参考实现(`domain/`、`context/`、`state/` …)。`go build ./...`。
-- `runtime-rs/` — Rust 参考实现,与 Go 逐字段对齐。`cargo build`。
+- `runtime-go/` — Go 参考实现(`domain/`、`context/`、`state/` …)。`cd runtime-go && go build ./...`。
+- `runtime-rs/` — Rust 参考实现,与 Go 逐字段对齐。`cd runtime-rs && cargo build`。
 - `diagrams/` — 架构与时序图源文件。
 - `docs/` — MkDocs 站点入口(符号链接,不修改)。
 

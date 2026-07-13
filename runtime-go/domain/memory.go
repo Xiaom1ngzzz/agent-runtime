@@ -33,6 +33,9 @@ type MemoryItem struct {
 	OriginTaskID  string
 	OriginSeqFrom int64
 	OriginSeqTo   int64
+
+	// 多租户隔离(生产强制,见 ch05 §5.3)
+	TenantID string
 }
 
 // MemoryKind 见 ch05 §5.2.1。
@@ -56,4 +59,7 @@ type Query struct {
 	TopK           int
 	MinScore       float64
 	IncludeExpired bool
+
+	// 非空时强制 tenant 过滤,禁止跨租户召回(ch05 §5.3)
+	TenantID string
 }

@@ -43,6 +43,9 @@ pub struct MemoryItem {
     pub origin_seq_from: i64,
     #[serde(default)]
     pub origin_seq_to: i64,
+
+    #[serde(default)]
+    pub tenant_id: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -63,6 +66,7 @@ pub struct Query {
     pub top_k: usize,
     pub min_score: f64,
     pub include_expired: bool,
+    pub tenant_id: String,
 }
 
 #[derive(Debug)]
@@ -96,7 +100,17 @@ impl InMemStore {
 impl MemoryStore for InMemStore {
     fn upsert(&self, item: MemoryItem) -> Result<(), MemoryError> {
         let mut guard = self.items.lock().unwrap();
-        if let Some(existing) = guard.get(&item.key) {
+        let slot = store_key(&item);
+        if let Some(existing) = guard.get(&slot) {
+            if !item.tenant_id.is_empty()
+                && !existing.tenant_id.is_empty()
+                && item.tenant_id != existing.tenant_id
+            {
+                return Err(MemoryError(format!(
+                    "memory tenant mismatch for key {:?}: got {}, existing {}",
+                    item.key, item.tenant_id, existing.tenant_id
+                )));
+            }
             if item.version < existing.version {
                 return Err(MemoryError(format!(
                     "memory version regression for key {:?}: got {}, current {}",
@@ -107,7 +121,7 @@ impl MemoryStore for InMemStore {
                 return Ok(()); // 幂等
             }
         }
-        guard.insert(item.key.clone(), item);
+        guard.insert(slot, item);
         Ok(())
     }
 
@@ -119,6 +133,9 @@ impl MemoryStore for InMemStore {
 
         let mut scored: Vec<(MemoryItem, f64)> = Vec::new();
         for item in guard.values() {
+            if !q.tenant_id.is_empty() && item.tenant_id != q.tenant_id {
+                continue;
+            }
             // Kind 过滤
             if let Some(k) = q.kind_filter {
                 if item.kind != k {
@@ -131,6 +148,10 @@ impl MemoryStore for InMemStore {
             }
             // Tags 过滤
             if !q.tags.is_empty() && !has_all_tags(&item.tags, &q.tags) {
+                continue;
+            }
+            // 过期过滤(§5.4.1)
+            if !q.include_expired && is_expired(&item.expires_at) {
                 continue;
             }
             // Keywords 过滤
@@ -173,14 +194,28 @@ impl MemoryStore for InMemStore {
 
     fn expire(&self, key: &str) -> Result<(), MemoryError> {
         let mut guard = self.items.lock().unwrap();
-        if let Some(item) = guard.get_mut(key) {
-            item.expires_at = "1970-01-01T00:00:00Z".into(); // 强制过期
+        for item in guard.values_mut() {
+            if item.key == key {
+                item.expires_at = "1970-01-01T00:00:00Z".into(); // 强制过期
+            }
         }
         Ok(())
     }
 }
 
 // ---------- helpers ----------
+
+fn store_key(item: &MemoryItem) -> String {
+    if item.tenant_id.is_empty() {
+        item.key.clone()
+    } else {
+        format!("{}|{}", item.tenant_id, item.key)
+    }
+}
+
+fn is_expired(expires_at: &str) -> bool {
+    expires_at == "1970-01-01T00:00:00Z"
+}
 
 fn has_all_tags(item_tags: &[String], required: &[String]) -> bool {
     required.iter().all(|r| item_tags.iter().any(|t| t == r))

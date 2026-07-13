@@ -31,11 +31,17 @@ fn ch04_compression_cycle() {
 
     let mut tools: HashMap<String, ToolFn> = HashMap::new();
     tools.insert("weather".into(), Box::new(|_| Ok(r#"{"temp":26}"#.into())));
-    let tool_descs = vec![Tool { name: "weather".into(), ..Default::default() }];
+    let tool_descs = vec![Tool {
+        name: "weather".into(),
+        ..Default::default()
+    }];
 
     let script: Vec<LLMResponse> = (1..=6)
         .map(|i| LLMResponse {
-            assistant: Message { role: "assistant".into(), ..Default::default() },
+            assistant: Message {
+                role: "assistant".into(),
+                ..Default::default()
+            },
             tool_calls: vec![ToolCall {
                 id: format!("c{}", i),
                 name: "weather".into(),
@@ -49,7 +55,11 @@ fn ch04_compression_cycle() {
     let rt = Runtime {
         event_store: store.clone(),
         state: state.clone(),
-        context: Arc::new(ContextEngineFake::new(state.clone(), store.clone(), tool_descs.clone())),
+        context: Arc::new(ContextEngineFake::new(
+            state.clone(),
+            store.clone(),
+            tool_descs.clone(),
+        )),
         prompt: Arc::new(PromptCompilerPassthrough),
         llm: Arc::new(LLMScript::new(script)),
         executor: Arc::new(ExecutorFake::new(store.clone(), tools)),
@@ -90,24 +100,48 @@ fn ch04_compression_cycle() {
     // ---------- Session / Task ----------
     let sid = "s1";
     let tid = "t1";
-    append_all(&rt, sid, "", "", vec![
-        EventPayload::SessionOpened(PayloadSessionOpened { principal: "u".into(), ..Default::default() }),
-        EventPayload::UserSpoke(PayloadUserSpoke { text: "帮我盯天气".into() }),
-    ]);
-    append_all(&rt, sid, tid, "", vec![
-        EventPayload::TaskCreated(PayloadTaskCreated {
+    append_all(
+        &rt,
+        sid,
+        "",
+        "",
+        vec![
+            EventPayload::SessionOpened(PayloadSessionOpened {
+                principal: "u".into(),
+                ..Default::default()
+            }),
+            EventPayload::UserSpoke(PayloadUserSpoke {
+                text: "帮我盯天气".into(),
+            }),
+        ],
+    );
+    append_all(
+        &rt,
+        sid,
+        tid,
+        "",
+        vec![EventPayload::TaskCreated(PayloadTaskCreated {
             goal: "盯天气".into(),
-            budget: Budget { max_tokens: 8000, ..Default::default() },
+            budget: Budget {
+                max_tokens: 8000,
+                ..Default::default()
+            },
             parent_id: String::new(),
-        }),
-    ]);
+        })],
+    );
 
     // ---------- 跑 6 个 Turn 期间尝试压 ----------
     let mut compression_happened = false;
     for (i, turn_id) in ["r1", "r2", "r3", "r4", "r5", "r6"].iter().enumerate() {
-        append_all(&rt, sid, tid, turn_id, vec![
-            EventPayload::TurnStarted(PayloadTurnStarted { index: i as i32 }),
-        ]);
+        append_all(
+            &rt,
+            sid,
+            tid,
+            turn_id,
+            vec![EventPayload::TurnStarted(PayloadTurnStarted {
+                index: i as i32,
+            })],
+        );
         rt.step(sid, tid, turn_id).expect("step");
         let events = comp.tick(sid).expect("tick");
         if !events.is_empty() {
@@ -127,9 +161,16 @@ fn ch04_compression_cycle() {
             }
         }
     }
-    assert!(compression_happened, "expected at least one ContextCompressed event");
-    append_all(&rt, sid, tid, "", vec![
-        EventPayload::ProgressUpdated(PayloadProgressUpdated {
+    assert!(
+        compression_happened,
+        "expected at least one ContextCompressed event"
+    );
+    append_all(
+        &rt,
+        sid,
+        tid,
+        "",
+        vec![EventPayload::ProgressUpdated(PayloadProgressUpdated {
             task_id: tid.into(),
             progress: Progress {
                 goal: "盯天气".into(),
@@ -150,14 +191,17 @@ fn ch04_compression_cycle() {
                 }],
                 ..Default::default()
             },
-        }),
-    ]);
+        })],
+    );
 
     // ---------- 断言 1:View 里有 Summary + 部分 TurnDigest 被 Superseded ----------
     let view = state.lock().unwrap().view(sid).unwrap();
     assert!(!view.summaries.is_empty(), "summaries should be non-empty");
     let superseded_count = view.working_set.iter().filter(|d| d.superseded).count();
-    assert!(superseded_count > 0, "expected at least one Superseded TurnDigest");
+    assert!(
+        superseded_count > 0,
+        "expected at least one Superseded TurnDigest"
+    );
 
     // ---------- 断言 2:LayeredContextEngine.Assemble 输出含 <prior_summary> ----------
     let ctx = layered.assemble(sid, tid).unwrap();
@@ -165,9 +209,18 @@ fn ch04_compression_cycle() {
         .messages
         .iter()
         .any(|m| m.content.contains("<prior_summary>"));
-    assert!(has_summary, "Assemble output should contain <prior_summary>");
-    let has_progress = ctx.messages.iter().any(|m| m.content.contains("<task_progress"));
-    assert!(has_progress, "Assemble output should contain <task_progress>");
+    assert!(
+        has_summary,
+        "Assemble output should contain <prior_summary>"
+    );
+    let has_progress = ctx
+        .messages
+        .iter()
+        .any(|m| m.content.contains("<task_progress"));
+    assert!(
+        has_progress,
+        "Assemble output should contain <task_progress>"
+    );
 
     // ---------- 断言 3:回放性 —— 全量 Fold 后视图相同 ----------
     let all_events: Vec<Event> = store.lock().unwrap().snapshot();
@@ -175,13 +228,21 @@ fn ch04_compression_cycle() {
     fresh.apply(&all_events).unwrap();
     let view2 = fresh.view(sid).unwrap();
 
-    assert_eq!(view.summaries.len(), view2.summaries.len(), "summaries len mismatch");
-    assert_eq!(view.working_set.len(), view2.working_set.len(), "working_set len mismatch");
+    assert_eq!(
+        view.summaries.len(),
+        view2.summaries.len(),
+        "summaries len mismatch"
+    );
+    assert_eq!(
+        view.working_set.len(),
+        view2.working_set.len(),
+        "working_set len mismatch"
+    );
     for i in 0..view.working_set.len() {
         assert_eq!(
-            view.working_set[i].superseded,
-            view2.working_set[i].superseded,
-            "superseded mismatch at {}", i
+            view.working_set[i].superseded, view2.working_set[i].superseded,
+            "superseded mismatch at {}",
+            i
         );
     }
 

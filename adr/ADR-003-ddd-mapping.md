@@ -29,12 +29,12 @@
 | **Ubiquitous Language** | 严格建立 `Session / Task / Turn / Event` 四词术语;`ch01 §1.7` 专门对比 OpenAI 的 `Thread/Run/Step`、LangGraph 的 `State/Checkpoint`、AutoGen 的 `GroupChat` 等命名并逐条说明为什么不采用 | ch01 §1.3, §1.7 |
 | **Bounded Context** | Runtime 边界 —— 明确哪些**在** Runtime 内(Session/Task/Turn/Event 生命周期、Context 组装、State/事件、工具调度、Trace);哪些**不在**(LLM Provider、Tool 实现、Storage 后端、UI) | ch01 §1.5, ADR-001 |
 | **Entity** | `Session`、`Task`、`Turn` —— 有全局唯一 ID,有生命周期(pending → running → succeeded/failed/canceled/timeout) | ch01 §1.3 |
-| **Value Object** | `Event`、`Message`、`ToolCall`、`Summary`、`Decision`、`Progress`、`Step`、`TurnDigest`、`MemoryRef`、所有 `Payload*` —— 全部不可变、按值比较、无独立 ID(只是可能内嵌 Entity ID 作为字段) | ch01 §1.3, ch04 §4.6 |
+| **Value Object** | `Message`、`ToolCall`、`Summary`、`Decision`、`Progress`、`Step`、`TurnDigest`、`MemoryRef`、所有 `Payload*` —— 不可变、按值比较、无独立 ID(可能内嵌 Entity ID 作为字段) | ch01 §1.3, ch04 §4.6 |
+| **Domain Event / 事实记录** | `Event` —— 有全局唯一 `id` 与 `seq`,是 Event Sourcing 的不可变事实载体,**不是经典 DDD 里的 Value Object**(有身份、不可按值替换) | ch01 §1.2, §1.3 |
 | **Aggregate Root** | `Session` —— 所有 `Task / Turn / Event` 通过 `SessionID` 归属其下;EventStore 的 append/apply 按 `session_id` 分锁串行,跨 Session 并行(ch03 §3.4.2) | ch01 §1.4, ch03 §3.4 |
 | **Aggregate 读模型 (Read Model)** | `SessionView` —— Fold 出的只读投影。是 CQRS 的读侧;它不代表"当前状态的真理",Event 流才是 | ch03 §3.5 |
-| **Domain Event** | `Event` 本身。ch01 §1.2 的"事件优先"决策 = 教科书级 Event Sourcing;Event 是 Runtime 的唯一真理来源 | ch01 §1.2 |
-| **Event Sourcing** | 显式采纳。约束 C1(单向)与 C2(幂等)= Event Sourcing 的两条铁律。ch03 §3.2 明确用这两条约束推出后面所有设计 | ch03 §3.2 |
-| **CQRS(Command Query Responsibility Segregation)** | `State.Apply`(command 侧,写)与 `State.View`(query 侧,读)在接口层分离;ADR-002 明确 Fold/Project/Compile 是纯函数,Chat/Emit 有副作用——分开推理各自的可变性 | ch03 §3.5, ADR-002 |
+| **Event Sourcing** | 显式采纳。约束 C1(单向)与 C2(确定性 Fold)= Event Sourcing 的两条铁律。ch03 §3.2 明确用这两条约束推出后面所有设计 | ch03 §3.2 |
+| **CQRS(Command Query Responsibility Segregation)** | **写侧**:`EventStore.Append` + `State.Apply`;**读侧**:`State.View` + Project 阶段对 EventStore 的只读展开(`as_of_seq` 须与 View 一致)。ADR-002 的 Fold/Project/Compile 是纯函数;Chat/Emit 有副作用 | ch03 §3.5, ADR-002 |
 | **Repository** | `EventStore` / `SnapshotStore` / `SummaryStore` / `MemoryStore`(ch05)—— 都是"接口 + 可换实现",持有聚合的持久化职责,业务层不直接接触存储细节 | ch03 §3.4, §3.6, ch04 §4.10, ch05 |
 | **Domain Service** | `Compressor`(ch04 §4.5)—— 跨聚合协调 `State + Store + Summarizer`,行为不属于任一 Entity 或 Value Object;`PromptCompiler`(ch06)同理 | ch04 §4.5, ch06 |
 | **Anti-Corruption Layer(ACL)** | `Summarizer` trait 隔离 LLM 调用(把不确定性挡在 Compressor 边界);`PromptCompiler` 的 Provider Adapter 隔离 LLM 厂商差异(OpenAI/Anthropic/Bedrock 用同一个内部表达) | ch04 §4.5, ch06 §6.6 |
@@ -147,6 +147,6 @@ type Event struct {
   - `ch01 §1.2` 事件优先决策(≈ Event Sourcing 的动机)
   - `ch01 §1.3` 四层对象(≈ Entity / Value Object 的落地)
   - `ch01 §1.7` 与其他框架命名的对比(≈ Ubiquitous Language 的实践)
-  - `ch03 §3.2` C1(单向) + C2(幂等) —— ES 两条铁律的形式化
+  - `ch03 §3.2` C1(单向) + C2(确定性 Fold) —— ES 两条铁律的形式化
   - `ch03 §3.5` SessionView 作为读模型
   - `ch04 §4.5` Compressor 作为 Domain Service

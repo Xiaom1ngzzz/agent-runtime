@@ -186,7 +186,7 @@ func TestCh06TypeCheckCatchesToolCallIDMismatch(t *testing.T) {
 	}
 }
 
-func TestCh06AnthropicRejectsConsecutiveUser(t *testing.T) {
+func TestCh06AnthropicMergesConsecutiveUser(t *testing.T) {
 	ctx := domain.Context{
 		Messages: []domain.Message{
 			{Role: "user", Content: "hi 1"},
@@ -194,11 +194,13 @@ func TestCh06AnthropicRejectsConsecutiveUser(t *testing.T) {
 		},
 	}
 	c := prompt.AnthropicCompiler{Model: "claude-opus-4-7"}
-	_, err := c.CompileToProvider(ctx)
-	if err == nil {
-		t.Fatal("expected error for consecutive user in Anthropic")
+	req, err := c.CompileToProvider(ctx)
+	if err != nil {
+		t.Fatalf("anthropic should merge consecutive user: %v", err)
 	}
-	// OpenAI 版本应该通过
+	if len(req.Messages) != 1 || req.Messages[0].Role != "user" || len(req.Messages[0].Content) != 2 {
+		t.Fatalf("expected merged user message with 2 content blocks, got %+v", req.Messages)
+	}
 	oc := prompt.OpenAICompiler{Model: "gpt-5"}
 	if _, err := oc.CompileToProvider(ctx); err != nil {
 		t.Fatalf("openai should accept consecutive user: %v", err)

@@ -18,7 +18,10 @@ use agent_runtime_rs::domain::{
 use agent_runtime_rs::runtime::Runtime;
 use agent_runtime_rs::state::State as _;
 
-use fakes::{ContextEngineFake, EventStoreFake, ExecutorFake, LLMScript, PromptCompilerPassthrough, StateFake, ToolFn};
+use fakes::{
+    ContextEngineFake, EventStoreFake, ExecutorFake, LLMScript, PromptCompilerPassthrough,
+    StateFake, ToolFn,
+};
 
 fn main() {
     let store = Arc::new(Mutex::new(EventStoreFake::new()));
@@ -35,26 +38,44 @@ fn main() {
     );
 
     let tool_descs = vec![
-        Tool { name: "weather".into(), description: "查天气".into(), ..Default::default() },
-        Tool { name: "send_email".into(), description: "发邮件".into(), ..Default::default() },
+        Tool {
+            name: "weather".into(),
+            description: "查天气".into(),
+            ..Default::default()
+        },
+        Tool {
+            name: "send_email".into(),
+            description: "发邮件".into(),
+            ..Default::default()
+        },
     ];
 
     let script = vec![
         LLMResponse {
-            assistant: Message { role: "assistant".into(), ..Default::default() },
+            assistant: Message {
+                role: "assistant".into(),
+                ..Default::default()
+            },
             tool_calls: vec![ToolCall {
-                id: "c1".into(), name: "weather".into(),
+                id: "c1".into(),
+                name: "weather".into(),
                 arguments: r#"{"city":"北京","date":"2026-07-10"}"#.into(),
             }],
-            tokens_in: 520, tokens_out: 48,
+            tokens_in: 520,
+            tokens_out: 48,
         },
         LLMResponse {
-            assistant: Message { role: "assistant".into(), ..Default::default() },
+            assistant: Message {
+                role: "assistant".into(),
+                ..Default::default()
+            },
             tool_calls: vec![ToolCall {
-                id: "c2".into(), name: "send_email".into(),
+                id: "c2".into(),
+                name: "send_email".into(),
                 arguments: r#"{"to":"alice@example.com","body":"..."}"#.into(),
             }],
-            tokens_in: 610, tokens_out: 72,
+            tokens_in: 610,
+            tokens_out: 72,
         },
         LLMResponse {
             assistant: Message {
@@ -62,7 +83,8 @@ fn main() {
                 content: "已经发送提醒邮件给 Alice。".into(),
                 ..Default::default()
             },
-            tokens_in: 700, tokens_out: 20,
+            tokens_in: 700,
+            tokens_out: 20,
             ..Default::default()
         },
     ];
@@ -70,7 +92,11 @@ fn main() {
     let rt = Runtime {
         event_store: store.clone(),
         state: state.clone(),
-        context: Arc::new(ContextEngineFake::new(state.clone(), store.clone(), tool_descs)),
+        context: Arc::new(ContextEngineFake::new(
+            state.clone(),
+            store.clone(),
+            tool_descs,
+        )),
         prompt: Arc::new(PromptCompilerPassthrough),
         llm: Arc::new(LLMScript::new(script)),
         executor: Arc::new(ExecutorFake::new(store.clone(), tools)),
@@ -79,33 +105,58 @@ fn main() {
     let sid = "s1";
     let tid = "t1";
 
-    fakes::append_all(&rt, sid, "", "", vec![
-        EventPayload::SessionOpened(PayloadSessionOpened {
-            principal: "user-42".into(), ..Default::default()
-        }),
-        EventPayload::UserSpoke(PayloadUserSpoke {
-            text: "帮我查一下明天北京的天气,然后写一封提醒邮件给 alice@example.com".into(),
-        }),
-    ]);
-    fakes::append_all(&rt, sid, tid, "", vec![
-        EventPayload::TaskCreated(PayloadTaskCreated {
+    fakes::append_all(
+        &rt,
+        sid,
+        "",
+        "",
+        vec![
+            EventPayload::SessionOpened(PayloadSessionOpened {
+                principal: "user-42".into(),
+                ..Default::default()
+            }),
+            EventPayload::UserSpoke(PayloadUserSpoke {
+                text: "帮我查一下明天北京的天气,然后写一封提醒邮件给 alice@example.com".into(),
+            }),
+        ],
+    );
+    fakes::append_all(
+        &rt,
+        sid,
+        tid,
+        "",
+        vec![EventPayload::TaskCreated(PayloadTaskCreated {
             goal: "查天气 + 发邮件".into(),
-            budget: Budget { max_tokens: 8000, ..Default::default() },
+            budget: Budget {
+                max_tokens: 8000,
+                ..Default::default()
+            },
             parent_id: String::new(),
-        }),
-    ]);
+        })],
+    );
 
     for (i, turn_id) in ["r1", "r2", "r3"].iter().enumerate() {
-        fakes::append_all(&rt, sid, tid, turn_id, vec![
-            EventPayload::TurnStarted(PayloadTurnStarted { index: i as i32 }),
-        ]);
+        fakes::append_all(
+            &rt,
+            sid,
+            tid,
+            turn_id,
+            vec![EventPayload::TurnStarted(PayloadTurnStarted {
+                index: i as i32,
+            })],
+        );
         rt.step(sid, tid, turn_id).expect("step failed");
     }
-    fakes::append_all(&rt, sid, tid, "", vec![
-        EventPayload::TaskEnded(PayloadTaskEnded {
-            status: TaskStatus::Succeeded, reason: String::new(),
-        }),
-    ]);
+    fakes::append_all(
+        &rt,
+        sid,
+        tid,
+        "",
+        vec![EventPayload::TaskEnded(PayloadTaskEnded {
+            status: TaskStatus::Succeeded,
+            reason: String::new(),
+        })],
+    );
 
     // ---- 汇总 ----
     let events = store.lock().unwrap().snapshot();
@@ -116,17 +167,31 @@ fn main() {
             e.id,
             e.payload.event_type(),
             e.session_id,
-            if e.task_id.is_empty() { "-" } else { e.task_id.as_str() },
-            if e.turn_id.is_empty() { "-" } else { e.turn_id.as_str() },
+            if e.task_id.is_empty() {
+                "-"
+            } else {
+                e.task_id.as_str()
+            },
+            if e.turn_id.is_empty() {
+                "-"
+            } else {
+                e.turn_id.as_str()
+            },
         );
     }
     println!();
 
     let view = state.lock().unwrap().view(sid).unwrap();
     println!("== 折叠后的 SessionView ==");
-    println!("  session:  id={} principal={}", view.session.id, view.session.principal);
+    println!(
+        "  session:  id={} principal={}",
+        view.session.id, view.session.principal
+    );
     for (tid, task) in &view.tasks {
-        println!("  task:     id={} goal={:?} status={:?}", tid, task.goal, task.status);
+        println!(
+            "  task:     id={} goal={:?} status={:?}",
+            tid, task.goal, task.status
+        );
     }
     for (tid, turn) in &view.last_turn {
         println!(

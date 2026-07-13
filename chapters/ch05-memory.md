@@ -130,8 +130,13 @@ type MemoryItem struct {
     OriginTaskID  string
     OriginSeqFrom int64
     OriginSeqTo   int64
+
+    // 多租户隔离(生产强制)
+    TenantID string  // 非空;Query/Upsert 必须带 tenant 过滤,禁止跨 tenant 召回
 }
 ```
+
+**生产约束 · `TenantID`**:Memory 跨 Session,天然是多租户系统的高风险面。**`MemoryStore.Query` 与 `Upsert` 必须把 `tenant_id` 作为强制过滤字段**(通常来自 `Session.Principal` 或上层租户上下文),禁止"只按 embedding 相似度"全局检索。漏加 tenant 过滤 = 跨租户数据泄漏。Round 2 参考实现未包含多租户,但协议层应预留该字段。
 
 **为什么每一个字段都在**:
 

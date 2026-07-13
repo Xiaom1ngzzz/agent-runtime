@@ -22,13 +22,13 @@ func Run(ctx context.Context, userInput string, tools []Tool) (string, error) {
         if len(resp.ToolCalls) == 0 {
             return resp.Text, nil
         }
+        msgs = append(msgs, resp.Assistant)                    // 先 assistant,再 tool(Provider 消息序)
         for _, call := range resp.ToolCalls {
             result := dispatch(call)                             // 真正跑工具
             msgs = append(msgs, Message{
                 Role: "tool", ToolCallID: call.ID, Content: result,
             })
         }
-        msgs = append(msgs, resp.Assistant)
     }
 }
 ```
@@ -44,11 +44,11 @@ fn run(user_input: &str, tools: &[Tool]) -> Result<String, Error> {
         if resp.tool_calls.is_empty() {
             return Ok(resp.text);
         }
+        msgs.push(resp.assistant);                                // 先 assistant,再 tool(Provider 消息序)
         for call in &resp.tool_calls {
             let result = dispatch(call);                          // 真正跑工具
             msgs.push(Message::tool(&call.id, result));
         }
-        msgs.push(resp.assistant);
     }
 }
 ```
@@ -83,7 +83,7 @@ fn run(user_input: &str, tools: &[Tool]) -> Result<String, Error> {
 
 **B. 事件优先（Event-first / Event Sourcing）**
 只把**发生了什么**作为原始事实——`UserSpoke`、`LLMReplied`、`ToolCalled`、`ToolReturned`——追加式记录、不可变。当前状态是这条事件流的**折叠结果**。
-崩溃恢复 = 从最近快照 replay 事件；回放 = 重放事件；审计 = 事件本身就是审计日志；观测 = 事件天然是 Span 边界。代价是写代码要克制"顺手改一下"的冲动。
+崩溃恢复 = 从最近快照 replay 事件；回放 = 重放事件；审计 = 事件流提供因果链追溯(见 §1.4.1,不等同于授权系统)。**Turn 是 Trace Span 的自然边界**；Event 是可观测的数据点,但 Span 由协调器在段转换处显式打点(ch02 §2.6),不是 Event 自带的属性。代价是写代码要克制"顺手改一下"的冲动。
 
 **本书选 B。** 第 3 章会展开 Event 的类型系统与实现,这里先接受一个约定:
 
@@ -322,7 +322,7 @@ pub struct PayloadToolCalled  { pub call_id: String, pub name: String, pub argum
 pub struct PayloadToolReturned { pub call_id: String, pub content: String, pub is_error: bool }
 ```
 
-消费方 `match &evt.payload { EventPayload::ToolCalled(p) => ..., _ => ... }`,编译器强制穷举——新增一种 EventType,所有还没处理它的 `match` 立刻编译不过。这比 Go 的 marker interface 更严格。
+消费方 `match &evt.payload { EventPayload::ToolCalled(p) => ..., _ => ... }`——**仅 Rust 在编译期强制穷举**;新增一种 EventType,所有还没处理它的 `match` 立刻编译不过。Go 的 marker interface 靠运行时 type assert,漏分支要到测试或线上才发现。
 
 **两种做法本质相同**:都在语言级机制上把"什么能作为 payload"卡住,拿到三条相同的收益:
 
@@ -370,10 +370,10 @@ erDiagram
 | 1. **崩溃**（进程被杀,`msgs` 丢）    | **Event** + Turn   | 每条 Event 追加到 EventStore 就落盘；重启后从最近的 Turn 边界 Checkpoint replay 到崩溃点,状态可重建。                                                    |
 | 2. **中断**（取消后副作用无法解释）   | **Task** + Event   | `Task.Status=canceled` 是取消的开关,通过 `ctx.Done()` 传到正在跑的 Turn；已经发生的副作用留在 `ToolCalled`/`ToolReturned` Event 里,UI 可查、可回滚。    |
 | 3. **并发**（多个 `msgs` 互相覆盖）   | **Session** + Task | Session 是权限与共享资源（钱包/日程/记忆）的归属边界；同一 Session **共享一条 append-only 事件流**,Task 级隔离靠 `task_id` 过滤与 Task 状态机,写入由 EventStore 串行化。            |
-| 4. **观测**（10 秒慢在哪不知道）      | **Turn** + Event   | Turn 天然是一个 Trace Span 的边界；Turn 内每条 Event 是子 Span,`LLMRequested→LLMReplied` 与 `ToolCalled→ToolReturned` 之间的时差直接给出分段耗时。       |
+| 4. **观测**（10 秒慢在哪不知道）      | **Turn** + Event   | Turn 是 Trace Span 的边界(协调器在 Fold/Project/Compile/Chat/Emit 各段打点)；Event 携带 `type`/`caused_by` 等属性供子 Span 或日志关联,**Event 本身不是 Span**。       |
 | 5. **成本**（30K token 无处拦）       | **Turn** + Task    | Turn 记录 `TokensIn/TokensOut/CostUS`；Task 持有 `Budget`；ContextEngine 组装上下文时按 `Budget - Σ(Turn.cost)` 做预算控制,超预算直接拒绝。              |
 | 6. **回放**（生产 case 本地复现不了） | **Event**（全部）  | 把 Session 的 Event 流导出,本地 `State.Apply(events)` 就能拿到一模一样的 SessionView；再 `Executor.Run` 继续跑,复现到出问题的那个 Turn。                |
-| 7. **审计**（谁授权发的邮件）         | **Event** + Task   | `ToolCalled{name=send_email}` 沿 `CausedBy` 链一路追回到 `UserSpoke`；Task 提供业务视角的分组（哪个"意图"下发的邮件）,Session 提供身份维度（谁的授权）。 |
+| 7. **审计**（谁触发了发邮件）         | **Event** + Task   | `ToolCalled{name=send_email}` 沿 `CausedBy` 链追溯到 `UserSpoke`,回答"谁说了什么、系统随后调了什么工具"；Task 提供意图分组,Session 提供 `Principal` 身份维度。**这不替代独立的授权/审批系统**——Runtime 记录事实,不裁决权限。 |
 
 **读法**:竖着看每一列 → 每层对象的**存在理由**。横着看每一行 → 一个真实痛点被"哪几个字段"接住。全书后面每一章都在把这张表里的某一格从"概念"变成"能跑的实现"。
 
@@ -525,7 +525,7 @@ sequenceDiagram
 - **用户按取消** → 标记 `Task t1` 为 `canceled`,正在跑的 Turn 从 `ctx.Done()` 感知到并抛错。工具已经产生的副作用留在 Event 流里,可查可回滚。
 - **邮件发送失败** → `ToolReturned{ok:false}` 是一条 Event,下一个 Turn 的 LLM 能看到并决定重试或告知用户。
 - **成本查询** → `SUM(costUsd) OVER turns WHERE taskId=t1`。
-- **审计"这封邮件谁授权的"** → 从 `ToolCalled{name=send_email}` 沿 `CausedBy` 链一路追回 `UserSpoke{U₁}`。
+- **审计"这封邮件谁触发的"** → 从 `ToolCalled{name=send_email}` 沿 `CausedBy` 链追溯到 `UserSpoke{U₁}`(事实追溯,非授权裁决)。
 - **生产 bug 复现** → 把 `Task t1` 的 Event 流导出,本地 `state.Apply(events)` + `executor.Run` 就能复现。
 
 ### 1.6.1 样本 Event 流:19 条事实
@@ -623,13 +623,14 @@ Go 的 marker interface 与 Rust 的封闭 enum（见 §1.3）都需要一张 `E
 
 | 来源                  | 该词               | 对应本书           | 本书为何不采用                                                                             |
 | --------------------- | ------------------ | ------------------ | ------------------------------------------------------------------------------------------ |
-| OpenAI Assistants API | **Thread**         | Session            | "Thread" 与 OS 线程强重名,读中英文代码时都会歧义                                           |
-| OpenAI Assistants API | **Run**            | Task               | Run 强绑定一次"Assistant 执行";本书 Task 更抽象,不预设绑哪个 Agent。中文也没有稳定对应词   |
-| OpenAI Assistants API | **Step**           | 近似 Turn          | Step 粒度过细,不覆盖"工具调用回填后的状态更新"这段                                         |
+| OpenAI Assistants API(已 deprecated) | **Thread**         | Session            | "Thread" 与 OS 线程强重名,读中英文代码时都会歧义;API 已 deprecated,仅作历史对照           |
+| OpenAI Assistants API(已 deprecated) | **Run**            | Task               | Run 强绑定一次"Assistant 执行";本书 Task 更抽象,不预设绑哪个 Agent。中文也没有稳定对应词   |
+| OpenAI Assistants API(已 deprecated) | **Step**           | 近似 Turn          | Step 粒度过细,不覆盖"工具调用回填后的状态更新"这段                                         |
 | LangGraph             | **State**          | Event 流的折叠结果 | LangGraph 是对象优先,State 可变;本书事件优先,把 State 视作派生视图（第 3、9 章会展开转换） |
 | LangGraph             | **Checkpoint**     | 快照 + Turn 边界   | 命名接近,机制放在第 9 章讨论                                                               |
 | AutoGen               | **GroupChat**      | 无对等物           | AutoGen 偏"多 Agent 协作";本书 Task 层不感知 Agent 数量,多 Agent 是 Executor 内部细节      |
-| Anthropic Agent SDK   | **Session / Task** | 直接一致           | 本书在其之下再切 Turn/Event,为计费和观测服务                                               |
+| Anthropic Agent SDK   | **Session**        | Session            | Session 概念接近;Anthropic 无与本书 Task 一一对应的独立类型,其"任务"常落在消息流或工具编排里 |
+| Anthropic Agent SDK   | *(无对等物)*       | Task               | 本书 Task 是取消/预算/成败的显式单元;Anthropic SDK 不单独建模这一层                         |
 | 通用软件              | **Conversation**   | Session + Context  | 词义太宽,同时指"聊天记录"和"上下文";本书拆成两个精确的词                                   |
 | 消息中间件            | **Message**        | Event              | Message 无因果链、无归属聚合;Event 强制 `CausedBy` 与 `session/task/turn` 归属             |
 
@@ -692,5 +693,5 @@ Go 的 marker interface 与 Rust 的封闭 enum（见 §1.3）都需要一张 `E
 - 相关章节:`ch02-runtime-dataflow.md`、`ch03-state-event.md`、`ch07-planner.md`
 - Michael Nygard, _Documenting Architecture Decisions_ (2011)
 - Martin Fowler, _Event Sourcing_ (2005)
-- OpenAI Assistants API — Threads, Runs, Steps
+- OpenAI Assistants API(deprecated) — Threads, Runs, Steps
 - LangGraph — StateGraph & Checkpointer

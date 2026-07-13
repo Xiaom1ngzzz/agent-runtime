@@ -19,8 +19,8 @@ import (
 	"strings"
 	"testing"
 
-	rtctx "agent-runtime-go/context"
 	"agent-runtime-go/compressor"
+	rtctx "agent-runtime-go/context"
 	"agent-runtime-go/domain"
 	"agent-runtime-go/runtime"
 	"agent-runtime-go/runtime/memfakes"
@@ -28,7 +28,12 @@ import (
 
 func TestCh04CompressionCycle(t *testing.T) {
 	ctx := stdctx.Background()
-	must := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	// ---------- 搭建 Runtime + Compressor ----------
 	store := memfakes.NewEventStore()

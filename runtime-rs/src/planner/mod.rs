@@ -185,14 +185,34 @@ fn distributed_budget(
     index: usize,
 ) -> crate::domain::Budget {
     let mut out = parent;
-    out.max_tokens = 0;
-    if parent.max_tokens > 0 && child_count > 0 {
-        out.max_tokens = parent.max_tokens / child_count as i64;
-        if index < (parent.max_tokens % child_count as i64) as usize {
-            out.max_tokens += 1;
-        }
-    }
+    out.max_tokens = distribute_i64(parent.max_tokens, child_count, index);
+    out.max_cost_us = distribute_f64(parent.max_cost_us, child_count, index);
     out
+}
+
+fn distribute_i64(total: i64, n: usize, index: usize) -> i64 {
+    if total <= 0 || n == 0 {
+        return 0;
+    }
+    let share = total / n as i64;
+    if index < (total % n as i64) as usize {
+        share + 1
+    } else {
+        share
+    }
+}
+
+fn distribute_f64(total: f64, n: usize, index: usize) -> f64 {
+    if total <= 0.0 || n == 0 {
+        return 0.0;
+    }
+    let units = (total * 1000.0).round() as i64;
+    let share = (units / n as i64) as f64 / 1000.0;
+    if index < (units % n as i64) as usize {
+        share + 0.001
+    } else {
+        share
+    }
 }
 
 pub fn build_progress_from_view(view: &SessionView, task_id: &str) -> Progress {
@@ -264,6 +284,18 @@ impl SagaCoordinator {
         let children = g.children_of(parent_id);
         if children.is_empty() {
             return Ok(vec![]);
+        }
+        let expected = split_goals(&parent.goal).len();
+        if expected >= 2 && children.len() < expected {
+            return Ok(vec![]);
+        }
+        for cid in children {
+            if matches!(
+                view.tasks.get(cid).map(|t| t.status),
+                Some(TaskStatus::Pending)
+            ) {
+                return Ok(vec![]);
+            }
         }
         let mut all_done = true;
         let mut any_failed = false;

@@ -61,7 +61,7 @@ type Task struct {
 
 ### 7.3.2 `SubTaskSpawned`
 
-Planner 的意图事件。Round 2 里 `GraphPlanner` 同时产出 `SubTaskSpawned` + `TaskCreated{ParentID}`,便于审计"谁决定拆分"。参考 Fold 会先为 Spawn 建 pending 占位;若规划 Event 列表只追加了一部分就崩溃,下一次 Plan 会补发缺失的 `TaskCreated` 或尚未创建的兄弟子任务。
+Planner 的意图事件。Round 2 里 `GraphPlanner` 同时产出 `SubTaskSpawned` + `TaskCreated{ParentID}`,便于审计"谁决定拆分"。参考 Fold 会先为 Spawn 建 pending 占位;若规划 Event 列表只追加了一部分就崩溃,下一次 Plan 会补发缺失的 `TaskCreated` 或尚未创建的兄弟子任务。**注意**:EventStore 要求 `Append` 原子批,但 Planner 可能返回多条 Event——协调器须么一次 `Append` 全部规划 Event,要么在崩溃恢复后由 Planner 幂等补全;**不能假设"部分 append 成功"后 Saga 仍安全**。
 
 ### 7.3.3 `BuildTaskGraph`
 
@@ -87,7 +87,7 @@ type Planner interface {
 
 1. Planner **只读** View,返回待 Append 的 Event——不碰 EventStore。
 2. 幂等优先:已有子 Task 时不再重复 spawn。
-3. 预算继承:子 Task 按商和余数分配父 `MaxTokens`,总和不超过父预算;父预算小于子任务数时允许部分子任务得到 0。
+3. **预算继承**:子 Task 继承父 `Budget` 全字段——`MaxTokens` 按商和余数分配;`MaxCostUS`、`MaxWallMS` 同样按子任务数均分(余数给前几个子任务),总和不超过父预算。父预算小于子任务数时允许部分子任务得到 0。
 
 **Go 参考实现** `planner.GraphPlanner`:Goal 含 `" + "` 则拆分子目标;否则尝试 `ProgressUpdated`。
 
@@ -104,7 +104,7 @@ ended, _ := planner.SagaCoordinator{}.OnChildEnded(view, parentID)
 // 仍有 Running → 空
 ```
 
-> **实现状态**:Round 2 只做"全成/有败"两种汇合。补偿(撤销已发邮件)、超时级联取消留给扩展。
+> **实现状态**:Round 2 只做"全成/有败"两种汇合。**Saga 仅在 Planner 规划完成(子 `TaskCreated` 全部落库)后生效**;若规划 Event 只追加了一部分就崩溃,恢复后须先由 Planner 补全子 Task,再评估父 Task 终态。补偿(撤销已发邮件)、超时级联取消留给扩展。
 
 ---
 

@@ -52,7 +52,12 @@ func TestCh02EndToEndMatchesCh01Totals(t *testing.T) {
 	}
 
 	const sid, tid = "s1", "t1"
-	mustT := func(err error) { t.Helper(); if err != nil { t.Fatal(err) } }
+	mustT := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	mustT(appendAll(rt, sid, "", "",
 		event(domain.EvtSessionOpened, domain.PayloadSessionOpened{Principal: "user-42"}),

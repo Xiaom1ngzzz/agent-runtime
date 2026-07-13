@@ -18,7 +18,10 @@ fn ch01_sample_replay() {
     let mut seen: HashSet<&str> = HashSet::new();
     for e in &events {
         if !e.caused_by.is_empty() && !seen.contains(e.caused_by.as_str()) {
-            panic!("event {} references unknown caused_by={}", e.id, e.caused_by);
+            panic!(
+                "event {} references unknown caused_by={}",
+                e.id, e.caused_by
+            );
         }
         seen.insert(e.id.as_str());
     }

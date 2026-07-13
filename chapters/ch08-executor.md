@@ -41,6 +41,14 @@ func (r *Registry) Descriptions() []domain.Tool  // 喂给 ContextEngine
 
 一份注册表同时服务 Project(工具 schema)与 Emit(实现)。
 
+**工具校验与输出限制(生产)**:
+
+- **入参**:Executor 在 dispatch 前按 `domain.Tool` 的 JSON Schema 校验 `arguments`;校验失败 → `ToolReturned{IsError}` + 可选 `ToolValidationFailed`(扩展 EventType),不调用实现函数。
+- **出参**:对返回内容设上限(如 64KB 文本 / 深度 ≤ 3 的 JSON);超限截断并标记 `truncated=true`,防止单轮 tool result 撑爆 Context 窗口。
+- **副作用类工具**:须在注册时声明 `side_effect` 级别,供 Planner/审计层区分 read-only 与 mutating 调用。
+
+Round 2 参考实现仅覆盖"未知工具 → BindFailed";schema 校验与输出截断留 ch11 / ADR-008 扩展。
+
 ### 8.3.2 ToolExecutor
 
 ```go

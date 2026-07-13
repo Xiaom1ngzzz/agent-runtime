@@ -8,6 +8,19 @@ use std::collections::HashMap;
 use super::StateError;
 use crate::domain::SessionView;
 
+/// 返回 SessionView 的深拷贝,供 View() 等只读 API 使用。
+pub fn clone_view(src: &SessionView) -> SessionView {
+    let mut out = src.clone();
+    out.tasks = src.tasks.clone();
+    out.last_turn = src.last_turn.clone();
+    out.seen_ids = src.seen_ids.clone();
+    out.working_set = src.working_set.clone();
+    out.summaries = src.summaries.clone();
+    out.memory_refs = src.memory_refs.clone();
+    out.progresses = src.progresses.clone();
+    out
+}
+
 /// "折叠到 seq 为止的 View"的镜像。
 #[derive(Debug, Clone, Default)]
 pub struct Snapshot {

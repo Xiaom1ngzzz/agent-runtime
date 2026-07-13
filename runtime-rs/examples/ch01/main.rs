@@ -14,14 +14,26 @@ fn main() {
     let events = sample::ch01_sample();
     println!("== Event 流({}条) ==", events.len());
     for e in &events {
-        let caused = if e.caused_by.is_empty() { "-" } else { e.caused_by.as_str() };
+        let caused = if e.caused_by.is_empty() {
+            "-"
+        } else {
+            e.caused_by.as_str()
+        };
         println!(
             "  {:<3} {:<20} session={} task={:<3} turn={:<3} caused_by={}",
             e.id,
             e.payload.event_type(),
             e.session_id,
-            if e.task_id.is_empty() { "-" } else { e.task_id.as_str() },
-            if e.turn_id.is_empty() { "-" } else { e.turn_id.as_str() },
+            if e.task_id.is_empty() {
+                "-"
+            } else {
+                e.task_id.as_str()
+            },
+            if e.turn_id.is_empty() {
+                "-"
+            } else {
+                e.turn_id.as_str()
+            },
             caused,
         );
     }

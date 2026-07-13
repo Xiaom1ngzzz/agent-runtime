@@ -9,6 +9,8 @@ package context
 import (
 	stdctx "context"
 	"fmt"
+	"sort"
+	"strings"
 
 	"agent-runtime-go/domain"
 	"agent-runtime-go/state"
@@ -68,27 +70,36 @@ func (e *LayeredContextEngine) Assemble(_ stdctx.Context, sessionID, taskID stri
 		})
 	}
 
-	// 4. Compressed History
-	//    只放"覆盖 seq 落在 WorkingSet 之外的" Summary,避免与原文重复。
+	// 4. Compressed History —— 按 from_seq 稳定排序后渲染。
 	minSeq := workingSetMinSeq(view.WorkingSet)
+	type sumEntry struct {
+		from int64
+		s    domain.Summary
+	}
+	var sums []sumEntry
 	for fromSeq, sum := range view.Summaries {
 		if sum.TaskID != "" && taskID != "" && sum.TaskID != taskID {
 			continue
 		}
 		if minSeq > 0 && sum.ToSeq >= minSeq {
-			// 该 Summary 覆盖的段还在 WorkingSet 里(且未 Superseded 的部分会作为原文出现)
-			// 跳过以避免重复;交给 Working Set 走原文
-			_ = fromSeq
 			continue
 		}
+		sums = append(sums, sumEntry{from: fromSeq, s: sum})
+	}
+	sort.Slice(sums, func(i, j int) bool {
+		if sums[i].s.FromSeq != sums[j].s.FromSeq {
+			return sums[i].s.FromSeq < sums[j].s.FromSeq
+		}
+		return sums[i].from < sums[j].from
+	})
+	for _, entry := range sums {
 		msgs = append(msgs, domain.Message{
 			Role:    "system",
-			Content: renderSummary(sum),
+			Content: renderSummary(entry.s),
 		})
 	}
 
-	// 5. Working Set:未 Superseded 的 Turn,展开原文。
-	//    Superseded 的 Turn 已经在第 3 层作为 Summary 出现。
+	// 5. Working Set:未 Superseded 的 Turn,展开原文(只读 seq <= view.MaxSeq 的事件)。
 	if e.Store != nil {
 		events, err := e.Store.Load(sessionID)
 		if err != nil {
@@ -96,6 +107,9 @@ func (e *LayeredContextEngine) Assemble(_ stdctx.Context, sessionID, taskID stri
 		}
 		activeTurns := activeTurnSet(view.WorkingSet, taskID)
 		for _, ev := range events {
+			if view.MaxSeq > 0 && ev.Seq > view.MaxSeq {
+				continue
+			}
 			if _, ok := activeTurns[ev.TurnID]; !ok {
 				continue
 			}
@@ -168,7 +182,15 @@ func renderSummary(s domain.Summary) string {
 
 func renderMemoryRef(r domain.MemoryRef) string {
 	return fmt.Sprintf("<memory_ref source=%q score=%.2f>\n%s\n</memory_ref>",
-		r.Source, r.Score, r.Content)
+		xmlEscape(r.Source), r.Score, xmlEscape(r.Content))
+}
+
+func xmlEscape(s string) string {
+	s = strings.ReplaceAll(s, "&", "&amp;")
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	s = strings.ReplaceAll(s, ">", "&gt;")
+	s = strings.ReplaceAll(s, "\"", "&quot;")
+	return s
 }
 
 func workingSetMinSeq(ws []domain.TurnDigest) int64 {

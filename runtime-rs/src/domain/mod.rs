@@ -66,9 +66,12 @@ pub struct Budget {
 #[derive(Debug, Clone, Default)]
 pub struct Turn {
     pub id: String,
+    pub session_id: String,
     pub task_id: String,
     pub index: i32,
     pub status: TurnStatus,
+    /// TurnStarted 事件的 seq；TurnEnded 时用于 WorkingSet.from_seq。
+    pub start_seq: i64,
     pub tokens_in: i64,
     pub tokens_out: i64,
     pub cost_us: f64,
@@ -104,16 +107,23 @@ pub struct Event {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Message {
+    #[serde(default)]
     pub role: String,             // "system" | "user" | "assistant" | "tool"
+    #[serde(default)]
     pub content: String,
+    #[serde(default)]
     pub tool_calls: Vec<ToolCall>,
+    #[serde(default)]
     pub tool_call_id: String,     // 仅当 role == "tool"
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ToolCall {
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub arguments: String,        // JSON 字符串
 }
 
@@ -136,8 +146,11 @@ pub struct LLMResponse {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Tool {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub description: String,
+    #[serde(default)]
     pub schema: String,           // JSON Schema 文本；具体解析在 tool crate
 }
 

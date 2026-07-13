@@ -45,6 +45,14 @@ impl CheckpointStore for MemCheckpointStore {
         if cp.schema_version == 0 {
             cp.schema_version = CHECKPOINT_SCHEMA_VERSION;
         }
+        if let Some(existing) = self.checkpoints.get(session_id) {
+            if existing.snapshot.seq > cp.snapshot.seq {
+                return Err(StateError(format!(
+                    "checkpoint save rejected: existing seq {} > new seq {}",
+                    existing.snapshot.seq, cp.snapshot.seq
+                )));
+            }
+        }
         self.checkpoints.insert(session_id.into(), cp);
         Ok(())
     }
@@ -52,6 +60,7 @@ impl CheckpointStore for MemCheckpointStore {
 
 pub trait RecoverableState: State {
     fn load_snapshot(&mut self, session_id: &str, view: SessionView);
+    fn reset_session(&mut self, session_id: &str);
 }
 
 pub fn take_checkpoint(
@@ -81,9 +90,20 @@ pub fn recover(
     let mut from_seq = 0i64;
     if let Some(cp) = cps.latest(session_id)? {
         if cp.schema_version == CHECKPOINT_SCHEMA_VERSION {
-            from_seq = cp.snapshot.seq;
+            if cp.snapshot.seq != cp.snapshot.view.max_seq {
+                return Err(StateError(format!(
+                    "checkpoint seq/view mismatch: seq={} max_seq={}",
+                    cp.snapshot.seq, cp.snapshot.view.max_seq
+                )));
+            }
+            state.reset_session(session_id);
             state.load_snapshot(session_id, cp.snapshot.view);
+            from_seq = cp.snapshot.seq;
+        } else {
+            state.reset_session(session_id);
         }
+    } else {
+        state.reset_session(session_id);
     }
     let remaining = store.load_from(session_id, from_seq)?;
     let n = remaining.len();

@@ -63,12 +63,15 @@ impl ContextEngine for LayeredContextEngine {
 
         // 4. Compressed History —— 覆盖 seq 落在 WorkingSet 之外的 Summary。
         let min_seq = working_set_min_seq(&view.working_set);
-        for sum in view.summaries.values() {
+        let mut sum_keys: Vec<i64> = view.summaries.keys().copied().collect();
+        sum_keys.sort_unstable();
+        for from_seq in sum_keys {
+            let sum = &view.summaries[&from_seq];
             if !sum.task_id.is_empty() && !task_id.is_empty() && sum.task_id != task_id {
                 continue;
             }
             if min_seq > 0 && sum.to_seq >= min_seq {
-                continue; // 该 Summary 覆盖段仍在 WorkingSet 原文里
+                continue;
             }
             msgs.push(Message {
                 role: "system".into(),
@@ -77,7 +80,7 @@ impl ContextEngine for LayeredContextEngine {
             });
         }
 
-        // 5. Working Set 展开原文。
+        // 5. Working Set 展开原文(只读 seq <= view.max_seq 的事件)。
         if let Some(store_arc) = &self.store {
             let events: Vec<Event> = {
                 let s = store_arc.lock().unwrap();
@@ -85,6 +88,9 @@ impl ContextEngine for LayeredContextEngine {
             };
             let active = active_turn_set(&view.working_set, task_id);
             for ev in &events {
+                if view.max_seq > 0 && ev.seq > view.max_seq {
+                    continue;
+                }
                 if !active.contains(&ev.turn_id) {
                     continue;
                 }
@@ -172,10 +178,19 @@ fn render_summary(s: &Summary) -> String {
 }
 
 fn render_memory_ref(r: &MemoryRef) -> String {
+    let content = xml_escape(&r.content);
     format!(
         "<memory_ref source=\"{}\" score={:.2}>\n{}\n</memory_ref>",
-        r.source, r.score, r.content
+        xml_escape(&r.source),
+        r.score,
+        content
     )
+}
+
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 fn working_set_min_seq(ws: &[TurnDigest]) -> i64 {

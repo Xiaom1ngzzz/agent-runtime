@@ -2,7 +2,8 @@
 // 而不是像 ch01 那样手写。产出对齐 ch01 样本:20 条 Event、3 个 Turn、tokens_in=1830。
 //
 // 运行:
-//   cd runtime-go && go run ./examples/ch02
+//
+//	cd runtime-go && go run ./examples/ch02
 package main
 
 import (

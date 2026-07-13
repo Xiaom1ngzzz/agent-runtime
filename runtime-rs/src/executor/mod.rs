@@ -77,10 +77,16 @@ impl<S: SnapshotStore> ToolExecutor<S> {
         }
     }
 
-    fn load_tool_calls(&self, turn_id: &str) -> Result<Vec<ToolCall>, ExecutorError> {
+    fn load_tool_calls(&self, turn: &Turn) -> Result<Vec<ToolCall>, ExecutorError> {
         let all = self.store.lock().unwrap().snapshot_all();
         for e in all.iter().rev() {
-            if e.turn_id != turn_id {
+            if e.turn_id != turn.id {
+                continue;
+            }
+            if !turn.session_id.is_empty() && e.session_id != turn.session_id {
+                continue;
+            }
+            if !turn.task_id.is_empty() && e.task_id != turn.task_id {
                 continue;
             }
             if let EventPayload::LLMReplied(p) = &e.payload {
@@ -88,6 +94,14 @@ impl<S: SnapshotStore> ToolExecutor<S> {
             }
         }
         Err(ExecutorError("no LLMReplied in current turn".into()))
+    }
+
+    fn truncate_output(s: &str) -> String {
+        const MAX: usize = 64 * 1024;
+        if s.len() <= MAX {
+            return s.to_string();
+        }
+        format!("{}…[truncated]", &s[..MAX])
     }
 
     fn dispatch_one(&self, call: &ToolCall) -> Vec<Event> {
@@ -142,7 +156,7 @@ impl<S: SnapshotStore> ToolExecutor<S> {
         let returned = match fn_(&call.arguments) {
             Ok(content) => PayloadToolReturned {
                 call_id: call.id.clone(),
-                content,
+                content: Self::truncate_output(&content),
                 is_error: false,
             },
             Err(err) => PayloadToolReturned {
@@ -169,7 +183,7 @@ impl<S: SnapshotStore> ToolExecutor<S> {
 
 impl<S: SnapshotStore + Send> Executor for ToolExecutor<S> {
     fn run(&self, turn: &Turn) -> Result<Vec<Event>, ExecutorError> {
-        let calls = self.load_tool_calls(&turn.id)?;
+        let calls = self.load_tool_calls(turn)?;
         let mut out = Vec::with_capacity(calls.len() * 2);
         for call in &calls {
             out.extend(self.dispatch_one(call));

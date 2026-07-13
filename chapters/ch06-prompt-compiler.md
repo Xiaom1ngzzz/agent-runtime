@@ -160,7 +160,7 @@ Tools 单独走 `Messages.Tools` 字段,**不进 role 序列**。
 | system 消息位置(OpenAI 只允许开头一条;Anthropic 允许分离但推荐开头) | 效果显著差 | system 出现在 user 之后 |
 | `role=tool` 必须有 `tool_call_id`,且指向上一条 assistant 的某个 tool_call | Provider 400 | tool response 找不到对应的 tool call |
 | `role=assistant with tool_calls` 之后,必须跟对应数量的 tool response 才能再有下一条 assistant | Provider 400 | tool call 未闭合 |
-| 连续 user 或连续 assistant | 部分 Provider 报错;有些默默合并 | 合并规则不一致 |
+| 连续 user 或连续 assistant | 部分 Provider 报错;Anthropic **会合并**连续 user | OpenAI 接受;Anthropic 合并为一条 user |
 | Tool schema 必须是合法 JSON Schema | Provider 拒 | schema 缺 `type` 字段 |
 
 Compiler 在 Emit 之前跑这些检查。发现问题就返回 `PromptError` 而非硬送——**上层业务通过错误感知,而不是通过 LLM 4xx 反推**。
@@ -205,7 +205,7 @@ except Exception as e:
 
 ### 6.5.3 Prompt Cache 边界对齐
 
-各家 Provider 的 Prompt Caching(Anthropic、OpenAI 都支持)基本原则:**从头开始,连续未变的前缀可以复用**。所以:
+各家 Provider 的 Prompt Caching(Anthropic、OpenAI 都支持)基本原则:**从头开始,连续未变的前缀可以复用**——命中依据是**前缀内容的哈希/字节序列**,不是 Go/Rust 对象 ID 或指针身份。所以:
 
 - Instructions 必须严格稳定,且放在最前
 - Task Frame 变得次频繁(每 Task),放在 Instructions 之后
@@ -225,7 +225,7 @@ def compile(ctx):
     return msgs
 ```
 
-Instructions 从磁盘或配置读:字符串每次生成完全一样,但**对象不同**——Prompt Cache 有些实现基于内容哈希,能命中;基于对象 id 的实现命中不了。
+Instructions 从磁盘或配置读:字符串每次生成完全一样,但**对象不同**——Prompt Cache 基于**前缀内容**,与对象身份无关;Compiler 应缓存编译后的字节序列,而非依赖运行时对象复用。
 
 **正确做法**:Compiler 里缓存 Instructions 的编译结果,`(instructions_version) -> compiled_bytes`。
 
@@ -246,8 +246,8 @@ Instructions 从磁盘或配置读:字符串每次生成完全一样,但**对象
 | **Tool schema 字段名** | `input_schema` | `parameters` |
 | **Tool 定义位置** | 顶层 `tools` 数组 | 顶层 `tools` 数组,但结构不同 |
 | **Tool call 的表达** | assistant message 内 `content` 数组含 `type=tool_use` 项 | assistant message 内 `tool_calls` 数组 |
-| **Tool result 的表达** | user message 内 `content` 数组含 `type=tool_result` 项 | 独立 role=`tool` 的 message |
-| **连续 user 的处理** | 报错 | 接受(当前实现不主动合并) |
+| **Tool result 的表达** | 同轮多个 tool_result **聚合进一条 user message** 的 `content` 数组 | 每个 tool_result 独立 `role=tool` 消息 |
+| **连续 user 的处理** | **合并**为一条 user message | 接受(当前实现不主动合并) |
 | **Cache 语法** | `cache_control: {type: "ephemeral"}` | 自动前缀 cache,无显式标记 |
 
 **关键**:业务代码写的是 `Context { Messages, Tools }`——一个中立的中间表达。Compiler 内部按 Provider 分派,把中间表达翻译成上面两种格式之一。**换 Provider 只需要换 Compiler 实例**。
@@ -283,10 +283,10 @@ resp := client.Chat(msgs)
 | 手段 | 做法 | 强度 | 何时用 |
 |---|---|---|---|
 | **Prompt 里说要 JSON** | "请以 JSON 格式回答" | 弱,LLM 可能输出 markdown 或额外解释 | 快速原型 |
-| **JSON Mode**(OpenAI/Anthropic 均支持) | 强制输出合法 JSON | 中,内容仍可能不匹配 schema | 简单结构 |
-| **Function Calling / Tool Use** | 定义 tool schema,LLM 通过 tool 调用返回 | 强,schema 匹配的验证由 Provider 保证 | 生产 |
+| **JSON Mode** | 强制输出合法 JSON(不保证匹配 schema) | 中,结构合法但字段可能缺失/多余 | 简单、无 schema 约束的结构 |
+| **Function Calling / Tool Use + Structured Outputs** | 定义 tool schema;Provider 端校验(如 OpenAI `strict: true`、Anthropic tool input schema) | 强,schema 匹配由 Provider 保证 | 生产 |
 
-**基线选择**:任何"需要下游解析"的结构化输出,走 **Tool Use**。这也是为什么 ch04 §4.6 Summary 生成用 tool 而不是 prompt。
+**基线选择**:任何"需要下游解析"的结构化输出,走 **Tool Use + Provider 端 schema 校验**(OpenAI Structured Outputs / Anthropic tool schema)。这也是为什么 ch04 §4.6 Summary 生成用 tool 而不是 prompt。
 
 ### 6.7.2 反例:JSON Mode + Prompt 里指定 schema
 
@@ -390,7 +390,7 @@ runtime-go/
     prompt.go             (已存在: PromptCompiler 接口)
     provider_request.go   (新: Anthropic/OpenAI 请求体类型 + checkMessages 基线校验 + PromptCheckError)
     reference.go          (新: ReferenceCompiler - 中立格式)
-    anthropic.go          (新: AnthropicCompiler,含 checkNoConsecutiveUser)
+    anthropic.go          (新: AnthropicCompiler,含连续 user 合并)
     openai.go             (新: OpenAICompiler)
 
 runtime-rs/src/
@@ -410,7 +410,7 @@ PromptStore(§6.8.2)未随本轮落地,见 §6.11 取舍。
 
 - Anthropic 版本:system 独立字段,不在 messages 数组;tool schema key 为 `input_schema`;tool_use / tool_result 展开为 content 数组项
 - OpenAI 版本:system 保留在 messages 里;tool schema key 为 `parameters`;tool response 是独立 `role=tool` 消息
-- 连续 user 的 Context:Anthropic Compiler 拒绝,OpenAI Compiler 接受
+- 连续 user 的 Context:Anthropic Compiler **合并后通过**;OpenAI Compiler 接受原样
 - Type-check 断言:构造一条 `tool_call_id` 无法匹配任何 assistant tool_call 的孤儿 tool 消息,Compile 返回带具体字段的 `PromptCheckError`
 
 **这份测试也是"业务代码只写 Context,换 Provider 只需换 Compiler"的形式化证据**。

@@ -150,6 +150,14 @@ fn event_fingerprint(
             format!("TaskCreated|goal={}|parent={}", p.goal, p.parent_id)
         }
         EventPayload::TaskEnded(p) => format!("TaskEnded|status={:?}", p.status),
+        EventPayload::UserSpoke(p) => format!("UserSpoke|text={}", p.text),
+        EventPayload::LLMReplied(p) => format!(
+            "LLMReplied|tools={}|tokens={}/{}",
+            p.tool_calls.len(),
+            p.tokens_in,
+            p.tokens_out
+        ),
+        EventPayload::LLMRequested(p) => format!("LLMRequested|model={}|msgs={}", p.model, p.messages.len()),
         EventPayload::TurnEnded(p) => format!("TurnEnded|status={:?}", p.status),
         EventPayload::ToolCalled(p) => format!(
             "ToolCalled|call={}|name={}|args={}",

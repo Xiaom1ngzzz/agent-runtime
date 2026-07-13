@@ -52,6 +52,11 @@ func (s *MemSnapshotStore) Save(sessionID string, snap Snapshot) error {
 	return nil
 }
 
+// CloneView 返回 SessionView 的深拷贝,供 View() 等只读 API 使用。
+func CloneView(in domain.SessionView) domain.SessionView {
+	return cloneSnap(Snapshot{View: in}).View
+}
+
 // cloneSnap 保证 SnapshotStore 内部持有独立副本,后续调用方修改 View 不会污染快照。
 // SessionView 包含 map/slice,浅拷贝会共享底层——这里做一次深拷贝(含 ch04 字段)。
 func cloneSnap(snap Snapshot) Snapshot {

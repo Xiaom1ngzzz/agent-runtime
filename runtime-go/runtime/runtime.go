@@ -30,7 +30,8 @@ type Runtime struct {
 // Step 驱动一个 Turn 完成,产出这一 Turn 追加的 Event 数组。
 //
 // 数据流(见 §2.3):
-//   Fold → Project → Compile → Chat → Emit
+//
+//	Fold → Project → Compile → Chat → Emit
 //
 // 每一步失败都会 emit 一条终止 Event 并返回 error,不做隐式重试。
 // 重试策略是调用方或上层 Loop 的事。

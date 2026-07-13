@@ -150,6 +150,12 @@ func eventFingerprint(e domain.Event, callOrder map[string]int, nextCall *int) s
 		return fmt.Sprintf("%s|goal=%s|parent=%s", e.Type, p.Goal, p.ParentID)
 	case domain.PayloadTaskEnded:
 		return fmt.Sprintf("%s|status=%s", e.Type, p.Status)
+	case domain.PayloadUserSpoke:
+		return fmt.Sprintf("%s|text=%s", e.Type, p.Text)
+	case domain.PayloadLLMReplied:
+		return fmt.Sprintf("%s|tools=%d|tokens=%d/%d", e.Type, len(p.ToolCalls), p.TokensIn, p.TokensOut)
+	case domain.PayloadLLMRequested:
+		return fmt.Sprintf("%s|model=%s|msgs=%d", e.Type, p.Model, len(p.Messages))
 	case domain.PayloadTurnEnded:
 		return fmt.Sprintf("%s|status=%s", e.Type, p.Status)
 	case domain.PayloadToolCalled:

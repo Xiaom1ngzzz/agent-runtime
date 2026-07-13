@@ -1,6 +1,7 @@
 package state
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -96,5 +97,41 @@ func TestWireUnknownType(t *testing.T) {
 	_, err := UnmarshalEvent(data)
 	if err == nil {
 		t.Fatal("expected error for unknown event type")
+	}
+}
+
+func TestCrossLangWireFixture(t *testing.T) {
+	data, err := os.ReadFile("../../fixtures/wire/user_spoke.json")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	got, err := UnmarshalEvent(data)
+	if err != nil {
+		t.Fatalf("unmarshal shared fixture: %v", err)
+	}
+	if got.ID != "e01" || got.SessionID != "s-cross" || got.Seq != 1 {
+		t.Fatalf("unexpected header: %+v", got)
+	}
+	p, ok := got.Payload.(domain.PayloadUserSpoke)
+	if !ok || p.Text != "hello 世界" {
+		t.Fatalf("payload mismatch: %+v", got.Payload)
+	}
+}
+
+func TestPartialPayloadDefaults(t *testing.T) {
+	data, err := os.ReadFile("../../fixtures/wire/task_created_partial_payload.json")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	got, err := UnmarshalEvent(data)
+	if err != nil {
+		t.Fatalf("partial payload should deserialize: %v", err)
+	}
+	p, ok := got.Payload.(domain.PayloadTaskCreated)
+	if !ok {
+		t.Fatalf("expected TaskCreated, got %T", got.Payload)
+	}
+	if p.Goal != "查天气" || p.Budget.MaxTokens != 0 || p.ParentID != "" {
+		t.Fatalf("unexpected defaults: %+v", p)
 	}
 }
