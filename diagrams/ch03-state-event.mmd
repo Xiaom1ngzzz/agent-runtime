@@ -1,0 +1,17 @@
+flowchart TB
+    TURN["Turn 边界"]
+
+    subgraph main[" "]
+        direction LR
+        RT["Runtime (§2.4)"]
+        ES["EventStore (append-only log)"]
+        SV["SessionView (只读视图)"]
+        RT -->|append| ES
+        ES -->|fold| SV
+    end
+
+    SN["Snapshot (offset, V)"]
+
+    TURN --> ES
+    ES --> SN
+    SN -->|save / load| ES

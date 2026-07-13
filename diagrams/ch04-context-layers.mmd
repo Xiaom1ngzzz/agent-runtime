@@ -1,0 +1,74 @@
+%%{init: {"flowchart": {"wrappingWidth": 720, "rankSpacing": 12, "nodeSpacing": 8}}}%%
+flowchart TB
+    subgraph Layers["六层输入"]
+        direction TB
+
+        subgraph R1[" "]
+            direction RL
+            F1["每 Session 变一次"]
+            T1[" "]
+            G1["　　　　　"]
+            L1["1. Instructions (system prompt / role card / policy)"]
+            F1 --> T1 --> G1 --> L1
+        end
+
+        subgraph R2[" "]
+            direction RL
+            F2["每 Task 变一次"]
+            T2[" "]
+            G2["　　　　　"]
+            L2["2. Task Frame (Task.Goal + Task.Budget + constraints)"]
+            F2 --> T2 --> G2 --> L2
+        end
+
+        subgraph R3[" "]
+            direction RL
+            F3["每 Turn 变一次"]
+            T3[" "]
+            G3["　　　　　"]
+            L3["3. Working Set (最近 N 个 Turn 的原文消息)"]
+            F3 --> T3 --> G3 --> L3
+        end
+
+        subgraph R4[" "]
+            direction RL
+            F4["Compressor 触发"]
+            T4[" "]
+            G4["　　　　　"]
+            L4["4. Compressed History (更早 Turns 的结构化摘要)"]
+            F4 --> T4 --> G4 --> L4
+        end
+
+        subgraph R5[" "]
+            direction RL
+            F5["按查询触发 (ch05)"]
+            T5[" "]
+            G5["　　　　　"]
+            L5["5. Memory Refs (向量库/KV 检索出的相关片段)"]
+            F5 --> T5 --> G5 --> L5
+        end
+
+        subgraph R6[" "]
+            direction RL
+            F6["每 Session/Task"]
+            T6[" "]
+            G6["　　　　　"]
+            L6["6. Tool Specs (可用工具的 JSON Schema)"]
+            F6 --> T6 --> G6 --> L6
+        end
+
+        R1 --- R2
+        R2 --- R3
+        R3 --- R4
+        R4 --- R5
+        R5 --- R6
+    end
+
+    classDef gap fill:transparent,stroke:transparent,color:transparent
+    class T1,G1,T2,G2,T3,G3,T4,G4,T5,G5,T6,G6 gap
+    classDef freq fill:transparent,stroke:transparent
+    class F1,F2,F3,F4,F5,F6 freq
+
+    Layers -->|Project| CTX["Context { Messages, Tools }"]
+    CTX -->|"Compile (ch04 §4.8)"| MSG["Messages"]
+    MSG -->|Chat| LLM["LLM"]
