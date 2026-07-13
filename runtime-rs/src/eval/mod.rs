@@ -157,7 +157,9 @@ fn event_fingerprint(
             p.tokens_in,
             p.tokens_out
         ),
-        EventPayload::LLMRequested(p) => format!("LLMRequested|model={}|msgs={}", p.model, p.messages.len()),
+        EventPayload::LLMRequested(p) => {
+            format!("LLMRequested|model={}|msgs={}", p.model, p.messages.len())
+        }
         EventPayload::TurnEnded(p) => format!("TurnEnded|status={:?}", p.status),
         EventPayload::ToolCalled(p) => format!(
             "ToolCalled|call={}|name={}|args={}",

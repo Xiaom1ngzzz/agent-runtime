@@ -2,8 +2,8 @@
 //! 与 `runtime-go/domain/domain.go` 逐字段对齐。
 //! 只包含数据结构，不含行为——行为在各操作模块中。
 
-pub mod summary;
 pub mod event_payloads;
+pub mod summary;
 pub mod task_graph;
 
 pub use event_payloads::*;
@@ -21,7 +21,7 @@ use std::time::SystemTime;
 #[derive(Debug, Clone, Default)]
 pub struct Session {
     pub id: String,
-    pub principal: String,           // 谁的 session
+    pub principal: String, // 谁的 session
     pub created_at: Option<SystemTime>,
     pub last_active_at: Option<SystemTime>,
     pub metadata: HashMap<String, String>,
@@ -94,10 +94,10 @@ pub enum TurnStatus {
 pub struct Event {
     pub id: String,
     pub session_id: String,
-    pub task_id: String,     // 空串表示不归属任何 Task
-    pub turn_id: String,     // 同上
+    pub task_id: String, // 空串表示不归属任何 Task
+    pub turn_id: String, // 同上
     pub ts: Option<SystemTime>,
-    pub caused_by: String,   // 上游 Event id，构成因果链
+    pub caused_by: String, // 上游 Event id，构成因果链
     pub payload: EventPayload,
     /// 每 session 单调递增。由 EventStore 在 append 时分配。0 表示尚未分配。
     pub seq: i64,
@@ -108,13 +108,13 @@ pub struct Event {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Message {
     #[serde(default)]
-    pub role: String,             // "system" | "user" | "assistant" | "tool"
+    pub role: String, // "system" | "user" | "assistant" | "tool"
     #[serde(default)]
     pub content: String,
     #[serde(default)]
     pub tool_calls: Vec<ToolCall>,
     #[serde(default)]
-    pub tool_call_id: String,     // 仅当 role == "tool"
+    pub tool_call_id: String, // 仅当 role == "tool"
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -124,7 +124,7 @@ pub struct ToolCall {
     #[serde(default)]
     pub name: String,
     #[serde(default)]
-    pub arguments: String,        // JSON 字符串
+    pub arguments: String, // JSON 字符串
 }
 
 #[derive(Debug, Clone, Default)]
@@ -151,7 +151,7 @@ pub struct Tool {
     #[serde(default)]
     pub description: String,
     #[serde(default)]
-    pub schema: String,           // JSON Schema 文本；具体解析在 tool crate
+    pub schema: String, // JSON Schema 文本；具体解析在 tool crate
 }
 
 // ---------- 上下文与视图 ----------
@@ -177,7 +177,6 @@ pub struct SessionView {
     pub seen_ids: std::collections::HashSet<String>,
 
     // ---------- ch04 Context 相关字段 ----------
-
     /// 最近几个 Turn 的原文引用。ch04 §4.4.1。
     pub working_set: Vec<TurnDigest>,
     /// 已生成的所有结构化摘要。key = seq 起点。

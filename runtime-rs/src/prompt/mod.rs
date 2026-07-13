@@ -79,7 +79,10 @@ impl AnthropicCompiler {
     pub fn compile_to_provider(&self, ctx: &Context) -> Result<AnthropicRequest, PromptError> {
         check_messages(&ctx.messages)?;
 
-        let mut req = AnthropicRequest { model: self.model.clone(), ..Default::default() };
+        let mut req = AnthropicRequest {
+            model: self.model.clone(),
+            ..Default::default()
+        };
 
         let sys_parts: Vec<&str> = ctx
             .messages
@@ -90,15 +93,16 @@ impl AnthropicCompiler {
         req.system = sys_parts.join("\n\n");
 
         let mut pending_tool_results: Vec<AnthropicContent> = Vec::new();
-        let flush_tool_results = |req: &mut AnthropicRequest, pending: &mut Vec<AnthropicContent>| {
-            if pending.is_empty() {
-                return;
-            }
-            req.messages.push(AnthropicMessage {
-                role: "user".into(),
-                content: std::mem::take(pending),
-            });
-        };
+        let flush_tool_results =
+            |req: &mut AnthropicRequest, pending: &mut Vec<AnthropicContent>| {
+                if pending.is_empty() {
+                    return;
+                }
+                req.messages.push(AnthropicMessage {
+                    role: "user".into(),
+                    content: std::mem::take(pending),
+                });
+            };
 
         for m in &ctx.messages {
             match m.role.as_str() {
@@ -223,19 +227,28 @@ impl OpenAICompiler {
     pub fn compile_to_provider(&self, ctx: &Context) -> Result<OpenAIRequest, PromptError> {
         check_messages(&ctx.messages)?;
 
-        let mut req = OpenAIRequest { model: self.model.clone(), ..Default::default() };
+        let mut req = OpenAIRequest {
+            model: self.model.clone(),
+            ..Default::default()
+        };
 
         for m in &ctx.messages {
             match m.role.as_str() {
                 "system" => req.messages.push(OpenAIMessage {
-                    role: "system".into(), content: m.content.clone(), ..Default::default()
+                    role: "system".into(),
+                    content: m.content.clone(),
+                    ..Default::default()
                 }),
                 "user" => req.messages.push(OpenAIMessage {
-                    role: "user".into(), content: m.content.clone(), ..Default::default()
+                    role: "user".into(),
+                    content: m.content.clone(),
+                    ..Default::default()
                 }),
                 "assistant" => {
                     let mut om = OpenAIMessage {
-                        role: "assistant".into(), content: m.content.clone(), ..Default::default()
+                        role: "assistant".into(),
+                        content: m.content.clone(),
+                        ..Default::default()
                     };
                     for tc in &m.tool_calls {
                         om.tool_calls.push(OpenAIToolCall {

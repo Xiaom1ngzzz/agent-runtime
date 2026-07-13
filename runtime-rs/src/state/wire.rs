@@ -34,11 +34,13 @@ pub struct EventWire {
 
 impl From<&Event> for EventWire {
     fn from(e: &Event) -> Self {
-        let ts = e.ts.and_then(|t| {
-            t.duration_since(std::time::UNIX_EPOCH)
-                .ok()
-                .map(|d| DateTime::from_timestamp(d.as_secs() as i64, d.subsec_nanos()))
-        }).flatten();
+        let ts =
+            e.ts.and_then(|t| {
+                t.duration_since(std::time::UNIX_EPOCH)
+                    .ok()
+                    .map(|d| DateTime::from_timestamp(d.as_secs() as i64, d.subsec_nanos()))
+            })
+            .flatten();
         EventWire {
             id: e.id.clone(),
             session_id: e.session_id.clone(),
@@ -115,7 +117,10 @@ mod tests {
         assert_eq!(got.session_id, original.session_id);
         assert_eq!(got.seq, original.seq);
         assert_eq!(got.caused_by, original.caused_by);
-        assert_eq!(format!("{:?}", got.payload), format!("{:?}", original.payload));
+        assert_eq!(
+            format!("{:?}", got.payload),
+            format!("{:?}", original.payload)
+        );
     }
 
     #[test]

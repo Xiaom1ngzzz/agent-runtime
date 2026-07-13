@@ -45,11 +45,16 @@ pub struct ByTurns {
 
 impl Compressor for ByTurns {
     fn tick(&mut self, session_id: &str) -> Result<Vec<Event>, CompressorError> {
-        let threshold = if self.threshold == 0 { 3 } else { self.threshold };
+        let threshold = if self.threshold == 0 {
+            3
+        } else {
+            self.threshold
+        };
 
         let view = {
             let st = self.state.lock().unwrap();
-            st.view(session_id).map_err(|e: StateError| CompressorError(e.0))?
+            st.view(session_id)
+                .map_err(|e: StateError| CompressorError(e.0))?
         };
 
         // 找出未 Superseded 且属于同一 Task 的 TurnDigest 序列。

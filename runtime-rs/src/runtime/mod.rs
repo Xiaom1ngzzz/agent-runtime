@@ -90,7 +90,10 @@ impl Runtime {
             &mut appended,
             &mut last_appended_id,
         )?;
-        let resp = self.llm.chat(&msgs, &ctx.tools).map_err(|e| StepError(e.0))?;
+        let resp = self
+            .llm
+            .chat(&msgs, &ctx.tools)
+            .map_err(|e| StepError(e.0))?;
         let tokens_in = resp.tokens_in;
         let tokens_out = resp.tokens_out;
         let tool_calls = resp.tool_calls.clone();
@@ -116,10 +119,7 @@ impl Runtime {
                 task_id: task_id.into(),
                 ..Default::default()
             };
-            let tool_events = self
-                .executor
-                .run(&tool_turn)
-                .map_err(|e| StepError(e.0))?;
+            let tool_events = self.executor.run(&tool_turn).map_err(|e| StepError(e.0))?;
             for mut e in tool_events {
                 e.session_id = session_id.into();
                 e.task_id = task_id.into();
