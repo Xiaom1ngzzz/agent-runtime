@@ -4,9 +4,11 @@
 
 pub mod summary;
 pub mod event_payloads;
+pub mod task_graph;
 
 pub use event_payloads::*;
 pub use summary::*;
+pub use task_graph::*;
 
 use serde::{Deserialize, Serialize};
 
@@ -27,10 +29,12 @@ pub struct Session {
 
 /// Session 内一件具体的事情。
 /// 是取消/重试/超时/成败评估的自然单位。
+/// `parent_id` 非空时表示嵌套子 Task(ch07 Task Graph)。
 #[derive(Debug, Clone, Default)]
 pub struct Task {
     pub id: String,
     pub session_id: String,
+    pub parent_id: String, // 空 = 根 Task
     pub goal: String,
     pub status: TaskStatus,
     pub budget: Budget,

@@ -49,7 +49,7 @@ func (s *MemSnapshotStore) Save(sessionID string, snap Snapshot) error {
 }
 
 // cloneSnap 保证 SnapshotStore 内部持有独立副本,后续调用方修改 View 不会污染快照。
-// SessionView 包含 map,浅拷贝会共享底层——这里做一次深拷贝。
+// SessionView 包含 map/slice,浅拷贝会共享底层——这里做一次深拷贝(含 ch04 字段)。
 func cloneSnap(snap Snapshot) Snapshot {
 	out := Snapshot{Seq: snap.Seq}
 	out.View.Session = snap.View.Session
@@ -65,6 +65,24 @@ func cloneSnap(snap Snapshot) Snapshot {
 	out.View.SeenIDs = make(map[string]bool, len(snap.View.SeenIDs))
 	for k, v := range snap.View.SeenIDs {
 		out.View.SeenIDs[k] = v
+	}
+	if snap.View.WorkingSet != nil {
+		out.View.WorkingSet = append([]domain.TurnDigest(nil), snap.View.WorkingSet...)
+	}
+	if snap.View.Summaries != nil {
+		out.View.Summaries = make(map[int64]domain.Summary, len(snap.View.Summaries))
+		for k, v := range snap.View.Summaries {
+			out.View.Summaries[k] = v
+		}
+	}
+	if snap.View.MemoryRefs != nil {
+		out.View.MemoryRefs = append([]domain.MemoryRef(nil), snap.View.MemoryRefs...)
+	}
+	if snap.View.Progresses != nil {
+		out.View.Progresses = make(map[string]domain.Progress, len(snap.View.Progresses))
+		for k, v := range snap.View.Progresses {
+			out.View.Progresses[k] = v
+		}
 	}
 	return out
 }

@@ -87,6 +87,7 @@ fn ch02_end_to_end_matches_ch01_totals() {
         EventPayload::TaskCreated(PayloadTaskCreated {
             goal: "查天气 + 发邮件".into(),
             budget: Budget { max_tokens: 8000, ..Default::default() },
+            parent_id: String::new(),
         }),
     ]);
 

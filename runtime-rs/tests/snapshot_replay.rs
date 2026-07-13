@@ -86,6 +86,7 @@ fn snapshot_replay() {
         EventPayload::TaskCreated(PayloadTaskCreated {
             goal: "查天气 + 发邮件".into(),
             budget: Budget { max_tokens: 8000, ..Default::default() },
+            parent_id: String::new(),
         }),
     ]);
 

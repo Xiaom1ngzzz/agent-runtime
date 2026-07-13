@@ -77,10 +77,20 @@ pub struct StateFake {
 }
 
 impl StateFake {
-    pub fn new() -> Self { Self { views: HashMap::new() } }
+    pub fn new() -> Self {
+        Self {
+            views: HashMap::new(),
+        }
+    }
 
     /// 把已折叠的 View 作为初始状态注入。§3.6.3 恢复流程用。
     pub fn load_snapshot(&mut self, session_id: &str, view: SessionView) {
+        self.views.insert(session_id.into(), view);
+    }
+}
+
+impl agent_runtime_rs::state::RecoverableState for StateFake {
+    fn load_snapshot(&mut self, session_id: &str, view: SessionView) {
         self.views.insert(session_id.into(), view);
     }
 }
@@ -146,6 +156,7 @@ fn apply_one(view: &mut SessionView, e: &Event) {
                 Task {
                     id: e.task_id.clone(),
                     session_id: e.session_id.clone(),
+                    parent_id: p.parent_id.clone(),
                     goal: p.goal.clone(),
                     status: TaskStatus::Running,
                     budget: p.budget,
@@ -153,6 +164,23 @@ fn apply_one(view: &mut SessionView, e: &Event) {
                     ended_at: None,
                 },
             );
+        }
+        EventPayload::SubTaskSpawned(p) => {
+            if !view.tasks.contains_key(&p.child_task_id) {
+                view.tasks.insert(
+                    p.child_task_id.clone(),
+                    Task {
+                        id: p.child_task_id.clone(),
+                        session_id: e.session_id.clone(),
+                        parent_id: p.parent_task_id.clone(),
+                        goal: p.goal.clone(),
+                        status: TaskStatus::Pending,
+                        budget: p.budget,
+                        started_at: e.ts,
+                        ended_at: None,
+                    },
+                );
+            }
         }
         EventPayload::TaskEnded(p) => {
             if let Some(t) = view.tasks.get_mut(&e.task_id) {

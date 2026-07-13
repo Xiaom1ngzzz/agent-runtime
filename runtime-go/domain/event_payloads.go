@@ -19,8 +19,9 @@ func (PayloadSessionOpened) eventPayload() {}
 // ---------- Task ----------
 
 type PayloadTaskCreated struct {
-	Goal   string
-	Budget Budget
+	Goal     string
+	Budget   Budget
+	ParentID string // 空 = 根 Task；与 Task.ParentID 对齐(ch07)
 }
 
 func (PayloadTaskCreated) eventPayload() {}
@@ -137,3 +138,29 @@ type PayloadMemoryQueried struct {
 }
 
 func (PayloadMemoryQueried) eventPayload() {}
+
+// ---------- Task Graph (ch07) ----------
+
+// PayloadSubTaskSpawned 记录 Planner 为父 Task 派生出一个子 Task。
+// 与 TaskCreated 的关系:SubTaskSpawned 是 Planner 的意图事件;
+// 协调器/Loop 随后追加 TaskCreated{ParentID} 真正创建子 Task。
+// Round 2 参考实现里 Plan 直接产出 TaskCreated(带 ParentID),本 payload 保留给显式图编排。
+type PayloadSubTaskSpawned struct {
+	ParentTaskID string
+	ChildTaskID  string
+	Goal         string
+	Budget       Budget
+}
+
+func (PayloadSubTaskSpawned) eventPayload() {}
+
+// ---------- Tool binding (ch08) ----------
+
+// PayloadToolBindFailed 记录工具注册表里找不到或 schema 校验失败。
+type PayloadToolBindFailed struct {
+	CallID string
+	Name   string
+	Reason string // "unknown_tool" | "schema_invalid" | ...
+}
+
+func (PayloadToolBindFailed) eventPayload() {}

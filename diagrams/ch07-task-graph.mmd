@@ -1,0 +1,23 @@
+flowchart TB
+  subgraph plan [Planner]
+    P[GraphPlanner.Plan]
+    S[SagaCoordinator]
+  end
+  subgraph exec [Executor]
+    E[ToolExecutor.Run]
+  end
+  subgraph persist [Checkpoint]
+    C[TakeCheckpoint]
+    R[Recover]
+  end
+  View[SessionView] --> P
+  P -->|SubTaskSpawned TaskCreated| ES[(EventStore)]
+  ES --> E
+  E -->|ToolCalled ToolReturned| ES
+  ES --> S
+  S -->|TaskEnded parent| ES
+  ES -->|Turn boundary| C
+  C --> CP[(CheckpointStore)]
+  CP --> R
+  ES --> R
+  R --> View2[Restored SessionView]

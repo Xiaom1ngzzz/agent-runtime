@@ -64,6 +64,7 @@ pub fn ch01_sample() -> Vec<Event> {
             EventPayload::TaskCreated(PayloadTaskCreated {
                 goal: "查天气 + 发邮件".into(),
                 budget: Budget { max_tokens: 8000, ..Default::default() },
+                parent_id: String::new(),
             })),
 
         // ---- Turn 1: 决定查天气 ----
@@ -176,6 +177,7 @@ pub fn fold_sample(events: &[Event]) -> SessionView {
                     Task {
                         id: e.task_id.clone(),
                         session_id: e.session_id.clone(),
+                        parent_id: p.parent_id.clone(),
                         goal: p.goal.clone(),
                         status: TaskStatus::Running,
                         budget: p.budget,

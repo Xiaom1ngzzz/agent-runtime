@@ -20,18 +20,21 @@
 
 ## Part III — Execution（执行系统）
 
-- [ ] `chapters/ch07-planner.md` —— Planner & Task Graph
-- [ ] `chapters/ch08-executor.md` —— Executor
-- [ ] `chapters/ch09-checkpoint.md` —— Checkpoint & Recovery
-- [ ] `runtime-go/state/` & `runtime-rs/src/state/` —— 状态 / 事件 / Checkpoint 参考实现
+- [x] `chapters/ch07-planner.md` —— Planner & Task Graph
+- [x] `chapters/ch08-executor.md` —— Executor
+- [x] `chapters/ch09-checkpoint.md` —— Checkpoint & Recovery
+- [x] `adr/ADR-004-task-graph-saga.md` —— Task Graph 与 Saga
+- [x] `runtime-go/{planner,executor,state}/` & `runtime-rs/src/{planner,executor,state}/` —— 规划 / 执行 / Checkpoint 参考实现
+- [x] `runtime-go/examples/m3/` —— M3 最小 Agent 端到端
 
 ## Part IV — Evolution（演进）
 
-- [ ] `chapters/ch10-eval.md` —— Evaluation & Optimization
+- [x] `chapters/ch10-eval.md` —— Evaluation & Optimization
+- [x] `runtime-go/eval/` & `runtime-rs/src/eval/` —— 最小评测框架
 
 ## 里程碑
 
 - [x] **M1 Foundation**：Part I 三章 + ADR-001/002/003 落地。
 - [x] **M2 Context**：Part II 完成，Go/Rust 的 Compression Cycle、Memory Cycle、Provider Diff 测试可运行。（已收口：ch04–ch06 章节文字 + Round 2 最小闭环；生产扩展项在各章“实现状态”中标注）
-- [ ] **M3 Execution**：Part III 完成，端到端跑通一个最小 Agent。
-- [ ] **M4 Evolution**：Part IV 完成，配套评测框架。
+- [x] **M3 Execution**：Part III 完成，端到端跑通一个最小 Agent（Planner → Executor → Checkpoint → Eval）。
+- [x] **M4 Evolution**：Part IV 完成，配套评测框架（`CompareStreams` / Score）。

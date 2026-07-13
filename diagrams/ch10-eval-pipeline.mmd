@@ -1,0 +1,7 @@
+flowchart LR
+  G[Golden Events] --> C[CompareStreams]
+  A[Actual Events] --> C
+  C --> S[Score]
+  S --> P{Passed?}
+  P -->|yes| OK[CI green]
+  P -->|no| NG[CI red + Notes]

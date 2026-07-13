@@ -98,6 +98,7 @@ fn ch04_compression_cycle() {
         EventPayload::TaskCreated(PayloadTaskCreated {
             goal: "盯天气".into(),
             budget: Budget { max_tokens: 8000, ..Default::default() },
+            parent_id: String::new(),
         }),
     ]);
 

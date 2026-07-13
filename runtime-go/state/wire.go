@@ -47,6 +47,8 @@ var payloadFactory = map[domain.EventType]func() domain.EventPayload{
 	domain.EvtCompressionSkipped: func() domain.EventPayload { return &domain.PayloadCompressionSkipped{} },
 	domain.EvtProgressUpdated:    func() domain.EventPayload { return &domain.PayloadProgressUpdated{} },
 	domain.EvtMemoryQueried:      func() domain.EventPayload { return &domain.PayloadMemoryQueried{} },
+	domain.EvtSubTaskSpawned:     func() domain.EventPayload { return &domain.PayloadSubTaskSpawned{} },
+	domain.EvtToolBindFailed:     func() domain.EventPayload { return &domain.PayloadToolBindFailed{} },
 }
 
 // MarshalEvent 序列化一条 Event 为 JSON。Type 已由 domain.Event 显式携带,
@@ -128,6 +130,10 @@ func derefPayload(p domain.EventPayload) domain.EventPayload {
 	case *domain.PayloadProgressUpdated:
 		return *v
 	case *domain.PayloadMemoryQueried:
+		return *v
+	case *domain.PayloadSubTaskSpawned:
+		return *v
+	case *domain.PayloadToolBindFailed:
 		return *v
 	default:
 		return p

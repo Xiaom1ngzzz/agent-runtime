@@ -173,6 +173,12 @@ func (s *State) LoadSnapshot(sessionID string, view domain.SessionView) {
 	if view.SeenIDs == nil {
 		view.SeenIDs = map[string]bool{}
 	}
+	if view.Summaries == nil {
+		view.Summaries = map[int64]domain.Summary{}
+	}
+	if view.Progresses == nil {
+		view.Progresses = map[string]domain.Progress{}
+	}
 	s.views[sessionID] = &view
 }
 
@@ -188,8 +194,16 @@ func applyOne(v *domain.SessionView, e domain.Event) {
 		v.Session = domain.Session{ID: e.SessionID, Principal: p.Principal, CreatedAt: e.TS, LastActiveAt: e.TS}
 	case domain.PayloadTaskCreated:
 		v.Tasks[e.TaskID] = domain.Task{
-			ID: e.TaskID, SessionID: e.SessionID, Goal: p.Goal,
+			ID: e.TaskID, SessionID: e.SessionID, ParentID: p.ParentID, Goal: p.Goal,
 			Status: domain.TaskRunning, Budget: p.Budget, StartedAt: e.TS,
+		}
+	case domain.PayloadSubTaskSpawned:
+		// 图意图事件:若子 Task 尚未创建,先占位 pending;真正生命周期仍以 TaskCreated 为准。
+		if _, ok := v.Tasks[p.ChildTaskID]; !ok {
+			v.Tasks[p.ChildTaskID] = domain.Task{
+				ID: p.ChildTaskID, SessionID: e.SessionID, ParentID: p.ParentTaskID,
+				Goal: p.Goal, Status: domain.TaskPending, Budget: p.Budget, StartedAt: e.TS,
+			}
 		}
 	case domain.PayloadTaskEnded:
 		t := v.Tasks[e.TaskID]

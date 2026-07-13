@@ -28,6 +28,8 @@ pub const EVT_CONTEXT_COMPRESSED: EventType = "ContextCompressed";
 pub const EVT_COMPRESSION_SKIPPED: EventType = "CompressionSkipped";
 pub const EVT_PROGRESS_UPDATED: EventType = "ProgressUpdated";
 pub const EVT_MEMORY_QUERIED: EventType = "MemoryQueried";
+pub const EVT_SUB_TASK_SPAWNED: EventType = "SubTaskSpawned";
+pub const EVT_TOOL_BIND_FAILED: EventType = "ToolBindFailed";
 
 /// 与 Go 版 `EventPayload` marker interface 对等。
 /// 在 Rust 里用封闭 enum：外部无法新增 variant，消费方 match 必须穷举。
@@ -51,25 +53,29 @@ pub enum EventPayload {
     CompressionSkipped(PayloadCompressionSkipped),
     ProgressUpdated(PayloadProgressUpdated),
     MemoryQueried(PayloadMemoryQueried),
+    SubTaskSpawned(PayloadSubTaskSpawned),
+    ToolBindFailed(PayloadToolBindFailed),
 }
 
 impl EventPayload {
     pub fn event_type(&self) -> EventType {
         match self {
-            EventPayload::SessionOpened(_)     => EVT_SESSION_OPENED,
-            EventPayload::TaskCreated(_)       => EVT_TASK_CREATED,
-            EventPayload::TaskEnded(_)         => EVT_TASK_ENDED,
-            EventPayload::TurnStarted(_)       => EVT_TURN_STARTED,
-            EventPayload::TurnEnded(_)         => EVT_TURN_ENDED,
-            EventPayload::UserSpoke(_)         => EVT_USER_SPOKE,
-            EventPayload::LLMRequested(_)      => EVT_LLM_REQUESTED,
-            EventPayload::LLMReplied(_)        => EVT_LLM_REPLIED,
-            EventPayload::ToolCalled(_)        => EVT_TOOL_CALLED,
-            EventPayload::ToolReturned(_)      => EVT_TOOL_RETURNED,
+            EventPayload::SessionOpened(_) => EVT_SESSION_OPENED,
+            EventPayload::TaskCreated(_) => EVT_TASK_CREATED,
+            EventPayload::TaskEnded(_) => EVT_TASK_ENDED,
+            EventPayload::TurnStarted(_) => EVT_TURN_STARTED,
+            EventPayload::TurnEnded(_) => EVT_TURN_ENDED,
+            EventPayload::UserSpoke(_) => EVT_USER_SPOKE,
+            EventPayload::LLMRequested(_) => EVT_LLM_REQUESTED,
+            EventPayload::LLMReplied(_) => EVT_LLM_REPLIED,
+            EventPayload::ToolCalled(_) => EVT_TOOL_CALLED,
+            EventPayload::ToolReturned(_) => EVT_TOOL_RETURNED,
             EventPayload::ContextCompressed(_) => EVT_CONTEXT_COMPRESSED,
             EventPayload::CompressionSkipped(_) => EVT_COMPRESSION_SKIPPED,
             EventPayload::ProgressUpdated(_) => EVT_PROGRESS_UPDATED,
             EventPayload::MemoryQueried(_) => EVT_MEMORY_QUERIED,
+            EventPayload::SubTaskSpawned(_) => EVT_SUB_TASK_SPAWNED,
+            EventPayload::ToolBindFailed(_) => EVT_TOOL_BIND_FAILED,
         }
     }
 }
@@ -86,6 +92,8 @@ pub struct PayloadSessionOpened {
 pub struct PayloadTaskCreated {
     pub goal: String,
     pub budget: Budget,
+    #[serde(default)]
+    pub parent_id: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -169,4 +177,19 @@ pub struct PayloadProgressUpdated {
 pub struct PayloadMemoryQueried {
     pub query: String,
     pub refs: Vec<MemoryRef>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PayloadSubTaskSpawned {
+    pub parent_task_id: String,
+    pub child_task_id: String,
+    pub goal: String,
+    pub budget: Budget,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PayloadToolBindFailed {
+    pub call_id: String,
+    pub name: String,
+    pub reason: String,
 }

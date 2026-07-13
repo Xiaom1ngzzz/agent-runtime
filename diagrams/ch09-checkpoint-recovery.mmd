@@ -1,0 +1,7 @@
+flowchart LR
+  A[TurnEnded] --> B[TakeCheckpoint]
+  B --> C[(CheckpointStore)]
+  D[Crash / Restart] --> E[Recover]
+  C --> E
+  F[(EventStore LoadFrom)] --> E
+  E --> G[SessionView]

@@ -18,9 +18,11 @@ type Session struct {
 
 // Task 是 Session 内一件具体的事情。
 // 是取消/重试/超时/成败评估的自然单位。
+// ParentID 非空时表示嵌套子 Task(ch07 Task Graph)。
 type Task struct {
 	ID        string
 	SessionID string
+	ParentID  string // 空 = 根 Task；非空 = 父 Task 的 ID
 	Goal      string
 	Status    TaskStatus
 	Budget    Budget
@@ -100,6 +102,8 @@ const (
 	EvtCompressionSkipped EventType = "CompressionSkipped"
 	EvtProgressUpdated    EventType = "ProgressUpdated"
 	EvtMemoryQueried      EventType = "MemoryQueried"
+	EvtSubTaskSpawned     EventType = "SubTaskSpawned" // ch07
+	EvtToolBindFailed     EventType = "ToolBindFailed" // ch08
 )
 
 // ---------- LLM 交互类型 ----------

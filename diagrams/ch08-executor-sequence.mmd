@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant RT as Runtime.Step
+  participant EX as ToolExecutor
+  participant REG as Registry
+  participant T as Tool
+  RT->>EX: Run(turn)
+  EX->>EX: load LLMReplied.ToolCalls
+  loop each call
+    EX->>EX: ToolCalled
+    EX->>REG: Lookup(name)
+    alt unknown
+      EX->>EX: ToolBindFailed
+      EX->>EX: ToolReturned IsError
+    else known
+      EX->>T: fn(ctx, args)
+      T-->>EX: content / err / timeout
+      EX->>EX: ToolReturned
+    end
+  end
+  EX-->>RT: []Event

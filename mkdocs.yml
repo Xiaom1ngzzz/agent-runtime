@@ -86,11 +86,18 @@ nav:
       - Ch04 · Context Engine: chapters/ch04-context-engine.md
       - Ch05 · Memory Architecture: chapters/ch05-memory.md
       - Ch06 · Prompt Compiler: chapters/ch06-prompt-compiler.md
+  - Part III · Execution:
+      - Ch07 · Planner & Task Graph: chapters/ch07-planner.md
+      - Ch08 · Executor: chapters/ch08-executor.md
+      - Ch09 · Checkpoint & Recovery: chapters/ch09-checkpoint.md
+  - Part IV · Evolution:
+      - Ch10 · Evaluation & Optimization: chapters/ch10-eval.md
   - Architecture Decisions:
       - ADR 模板: adr/ADR-000.md
       - ADR-001 · Runtime 边界与职责: adr/ADR-001-runtime-domain.md
       - ADR-002 · Runtime 数据流协议: adr/ADR-002-dataflow-protocol.md
       - ADR-003 · Runtime 与 DDD 对应关系: adr/ADR-003-ddd-mapping.md
+      - ADR-004 · Task Graph 与 Saga: adr/ADR-004-task-graph-saga.md
 
 extra:
   social:

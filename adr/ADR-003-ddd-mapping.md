@@ -50,7 +50,7 @@
 | **Factory 模式** | Constructor 直接够用。Go 用 `NewX()` 函数,Rust 用 `impl X { pub fn new() }`,已经是事实上的 Factory。 | 若构造涉及复杂依赖注入或多态选择,再引入 Factory |
 | **Specification 模式** | 我们的过滤逻辑都是简单的 filter function(如 `activeTurnSet`、`selectRelevantSummaries`)。抽象成 Specification 反而绕。 | 若过滤规则需要组合(and/or/not)、需要持久化、需要跨 Bounded Context 共享,再引入 |
 | **Domain Event vs Integration Event 区分** | 目前只有一层 Event —— Domain Event 本身。没有跨 Bounded Context 发布订阅。 | 若引入 Runtime 之外的下游订阅方(Analytics、Billing 独立服务),需要区分"内部 Domain Event"与"对外 Integration Event" |
-| **Saga / Process Manager** | 目前 Task 是扁平的(ch01 §1.9 明确"本章按扁平处理")。跨 Task 协调没有需求。 | ch07 Planner & Task Graph 引入 sub-Task 时,协调子任务成败的组件将扮演 Saga/Process Manager 角色。届时新增 ADR |
+| **Saga / Process Manager** | 已引入,见 [ADR-004](ADR-004-task-graph-saga.md)。ch07 Planner 用 `ParentID` 树 + `SagaCoordinator` 汇合子 Task;Round 2 不做补偿事务。 | 需要补偿/任意 DAG 时扩展 ADR-004 |
 | **Context Mapping** | 目前只有一个 Bounded Context(Runtime),不需要考虑 BC 间的 relationship(Shared Kernel / Customer-Supplier / ACL 等) | 若拆分 Runtime 为多个 BC(如 Session Management BC 与 Execution BC 分家),需要显式做 Context Mapping |
 
 ### 反例:我们特别拒绝的两种"看起来像 DDD"的做法

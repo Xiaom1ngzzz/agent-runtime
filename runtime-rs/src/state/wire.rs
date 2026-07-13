@@ -157,6 +157,7 @@ mod tests {
                 max_tokens: 8000,
                 ..Default::default()
             },
+            parent_id: String::new(),
         }));
     }
 
