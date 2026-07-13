@@ -93,7 +93,9 @@ impl Default for InMemStore {
 
 impl InMemStore {
     pub fn new() -> Self {
-        Self { items: Mutex::new(HashMap::new()) }
+        Self {
+            items: Mutex::new(HashMap::new()),
+        }
     }
 }
 
@@ -156,9 +158,10 @@ impl MemoryStore for InMemStore {
             }
             // Keywords 过滤
             if !q.keywords.is_empty() {
-                let hit = q.keywords.iter().any(|kw|
-                    item.key.contains(kw) || item.content.contains(kw)
-                );
+                let hit = q
+                    .keywords
+                    .iter()
+                    .any(|kw| item.key.contains(kw) || item.content.contains(kw));
                 if !hit {
                     continue;
                 }
@@ -227,7 +230,9 @@ fn score_item(q: &Query, item: &MemoryItem) -> f64 {
         return cosine(&emb, &item.embedding);
     }
     if !q.keywords.is_empty() {
-        let hits = q.keywords.iter()
+        let hits = q
+            .keywords
+            .iter()
             .filter(|kw| item.key.contains(kw.as_str()) || item.content.contains(kw.as_str()))
             .count();
         return hits as f64 / q.keywords.len() as f64;

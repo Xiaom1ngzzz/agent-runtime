@@ -42,12 +42,16 @@ pub struct MemSnapshotStore {
 
 impl MemSnapshotStore {
     pub fn new() -> Self {
-        Self { snaps: HashMap::new() }
+        Self {
+            snaps: HashMap::new(),
+        }
     }
 }
 
 impl Default for MemSnapshotStore {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SnapshotStore for MemSnapshotStore {
