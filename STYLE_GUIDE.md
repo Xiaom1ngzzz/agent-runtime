@@ -25,7 +25,7 @@
 
 ## 代码
 
-- 参考实现放 `runtime-go/<module>/` 与 `runtime-rs/src/<module>.rs`，两语言字段逐一对齐。一处代码只在一章讲解。
+- 参考实现放 `runtime-go/<module>/` 与 `runtime-rs/src/<module>/`，两语言字段逐一对齐。一处代码只在一章讲解。
 - 章节内贴出的代码片段来自参考实现，附相对路径链接；同一概念先给 **Go**、再给 **Rust**（用粗体子标题分隔）。
 
 ## ADR

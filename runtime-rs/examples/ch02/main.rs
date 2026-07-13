@@ -12,11 +12,8 @@ mod fakes;
 use std::sync::{Arc, Mutex};
 
 use agent_runtime_rs::domain::{
-    Budget, LLMResponse, Message, TaskStatus, Tool, ToolCall,
-};
-use agent_runtime_rs::event_payloads::{
-    EventPayload, PayloadSessionOpened, PayloadTaskCreated, PayloadTaskEnded,
-    PayloadTurnStarted, PayloadUserSpoke,
+    Budget, EventPayload, LLMResponse, Message, PayloadSessionOpened, PayloadTaskCreated,
+    PayloadTaskEnded, PayloadTurnStarted, PayloadUserSpoke, TaskStatus, Tool, ToolCall,
 };
 use agent_runtime_rs::runtime::Runtime;
 use agent_runtime_rs::state::State as _;

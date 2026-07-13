@@ -4,9 +4,8 @@
 use std::sync::{Arc, Mutex};
 
 use crate::context::ContextEngine;
-use crate::domain::{Event, Turn};
-use crate::event_payloads::{
-    EventPayload, PayloadLLMReplied, PayloadLLMRequested, PayloadTurnEnded,
+use crate::domain::{
+    Event, EventPayload, PayloadLLMReplied, PayloadLLMRequested, PayloadTurnEnded, Turn,
 };
 use crate::executor::Executor;
 use crate::llm::LLMProvider;

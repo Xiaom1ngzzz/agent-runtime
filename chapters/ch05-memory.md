@@ -472,7 +472,8 @@ runtime-go/
     inmem.go             (新: 内存 fake 实现,L1 档次)
 
 runtime-rs/src/
-  memory.rs              (新: 对应 Go 的三个文件)
+  memory/
+    mod.rs               (新: 对应 Go 的三个文件)
 ```
 
 ### 5.10.2 端到端测试:Memory Cycle
@@ -535,7 +536,7 @@ runtime-rs/src/
 - [ADR-003 · Runtime 与 DDD 对应关系](../adr/ADR-003-ddd-mapping.md)——MemoryStore 是典型的 Repository
 - 参考实现(Round 2 已落地):
   - Go: [`runtime-go/memory/memory.go`](../runtime-go/memory/memory.go)、[`runtime-go/memory/inmem.go`](../runtime-go/memory/inmem.go)、[`runtime-go/domain/memory.go`](../runtime-go/domain/memory.go)
-  - Rust: [`runtime-rs/src/memory.rs`](../runtime-rs/src/memory.rs)
+  - Rust: [`runtime-rs/src/memory/mod.rs`](../runtime-rs/src/memory/mod.rs)
 - 相关章节:`ch03-state-event.md`(§3.4 EventStore 契约对比)、`ch04-context-engine.md`(§4.2 六层输入的第 5 层,§4.5 Compressor 触发)、`ch06-prompt-compiler.md`(Memory Refs 的展开渲染)
 - 研究/工程参考:
   - MemGPT: Charles Packer et al. (2023) —— Episodic Memory 的分层设计源头

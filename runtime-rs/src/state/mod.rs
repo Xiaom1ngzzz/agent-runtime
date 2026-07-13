@@ -1,6 +1,12 @@
 //! State 与 EventStore 接口。
 //! 与 `runtime-go/state/state.go` 对齐。实现见 ch03-state-event.md 与 ch09-checkpoint.md。
 
+pub mod snapshot;
+pub mod wire;
+
+pub use snapshot::{MemSnapshotStore, Snapshot, SnapshotStore};
+pub use wire::{marshal_event, unmarshal_event, EventWire};
+
 use crate::domain::{Event, SessionView};
 
 pub trait State {

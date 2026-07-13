@@ -9,16 +9,14 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use agent_runtime_rs::compressor::{ByTurns, Compressor, ScriptedSummarizer};
-use agent_runtime_rs::context::ContextEngine;
-use agent_runtime_rs::domain::{Budget, Event, LLMResponse, Message, Tool, ToolCall};
-use agent_runtime_rs::event_payloads::{
-    EventPayload, PayloadContextCompressed, PayloadSessionOpened, PayloadTaskCreated,
-    PayloadProgressUpdated, PayloadTurnStarted, PayloadUserSpoke,
+use agent_runtime_rs::context::{ContextEngine, LayeredContextEngine};
+use agent_runtime_rs::domain::{
+    Budget, Decision, Event, EventPayload, LLMResponse, Message, PayloadContextCompressed,
+    PayloadProgressUpdated, PayloadSessionOpened, PayloadTaskCreated, PayloadTurnStarted,
+    PayloadUserSpoke, Progress, Step, StepKind, Summary, Tool, ToolCall,
 };
-use agent_runtime_rs::layered::LayeredContextEngine;
 use agent_runtime_rs::runtime::Runtime;
 use agent_runtime_rs::state::{EventStore as _, State as _};
-use agent_runtime_rs::summary::{Decision, Progress, Step, StepKind, Summary};
 
 use fakes::{
     append_all, ContextEngineFake, EventStoreFake, ExecutorFake, LLMScript,

@@ -8,8 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::Event;
-use crate::event_payloads::EventPayload;
+use crate::domain::{Event, EventPayload};
 
 /// 与 Go 版 `EventDTO` 对齐的 wire-format 表示。
 ///
@@ -88,10 +87,9 @@ pub fn unmarshal_event(data: &[u8]) -> Result<Event, serde_json::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{Budget, TurnStatus};
-    use crate::event_payloads::{
-        PayloadContextCompressed, PayloadTaskCreated, PayloadToolCalled, PayloadToolReturned,
-        PayloadTurnEnded, PayloadUserSpoke,
+    use crate::domain::{
+        Budget, PayloadContextCompressed, PayloadTaskCreated, PayloadToolCalled,
+        PayloadToolReturned, PayloadTurnEnded, PayloadUserSpoke, Summary, TurnStatus,
     };
 
     fn round_trip(payload: EventPayload) {
@@ -170,7 +168,7 @@ mod tests {
             strategy: "turns:8".into(),
             from_tokens: 8000,
             to_tokens: 2000,
-            summary: crate::summary::Summary {
+            summary: Summary {
                 session_id: "s1".into(),
                 task_id: "t1".into(),
                 from_seq: 100,

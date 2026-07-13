@@ -123,7 +123,7 @@ var payloadFactory = map[domain.EventType]func() domain.EventPayload{
 **Rust 端**——`serde` adjacently tagged enum:
 
 ```rust
-// runtime-rs/src/wire.rs
+// runtime-rs/src/state/wire.rs
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "payload")]
 pub enum EventPayloadWire {
@@ -169,7 +169,7 @@ type EventStore interface {
 ```
 
 ```rust
-// runtime-rs/src/state.rs
+// runtime-rs/src/state/mod.rs
 pub trait EventStore {
     fn append(&mut self, events: &[Event]) -> Result<(), StateError>;
     fn load(&self, session_id: &str) -> Result<Vec<Event>, StateError>;
@@ -337,7 +337,7 @@ pub trait SnapshotStore {
 
 ## 3.7 参考实现
 
-Go / Rust 两份参考实现字段逐一对齐。这一节只列关键代码,完整源码在 `runtime-go/state/` 与 `runtime-rs/src/state.rs`。
+Go / Rust 两份参考实现字段逐一对齐。这一节只列关键代码,完整源码在 `runtime-go/state/` 与 `runtime-rs/src/state/mod.rs`。
 
 ### 3.7.1 Wire format(JSON)
 
@@ -368,7 +368,7 @@ func UnmarshalEvent(data []byte) (domain.Event, error) {
 **Rust**:`serde` adjacently tagged enum 直接给出。
 
 ```rust
-// runtime-rs/src/wire.rs
+// runtime-rs/src/state/wire.rs
 #[derive(Serialize, Deserialize)]
 pub struct EventWire {
     pub id: String,
@@ -523,7 +523,7 @@ cd runtime-rs && cargo test snapshot_replay
 - [ADR-002 · Runtime 数据流协议](../adr/ADR-002-dataflow-protocol.md)——§Decision 里 Fold 的"纯度"定义
 - 参考实现:
     - Go: [`runtime-go/state/state.go`](../runtime-go/state/state.go)、[`runtime-go/state/wire.go`](../runtime-go/state/wire.go)、[`runtime-go/runtime/memfakes/memfakes.go`](../runtime-go/runtime/memfakes/memfakes.go)
-    - Rust: [`runtime-rs/src/state.rs`](../runtime-rs/src/state.rs)、[`runtime-rs/src/wire.rs`](../runtime-rs/src/wire.rs)
+    - Rust: [`runtime-rs/src/state/mod.rs`](../runtime-rs/src/state/mod.rs)、[`runtime-rs/src/state/wire.rs`](../runtime-rs/src/state/wire.rs)
 - 相关章节:`ch01-runtime-domain.md`、`ch02-runtime-dataflow.md`、`ch04-context-engine.md`、`ch09-checkpoint.md`、`ch10-eval.md`
 - Martin Fowler, _Event Sourcing_ (2005)
 - Greg Young, _CQRS Documents_ (2010)——State 只读视图与 Command 分离的经典阐述

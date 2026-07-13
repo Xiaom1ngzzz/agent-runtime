@@ -103,24 +103,24 @@ type Executor interface {
 **Rust:**
 
 ```rust
-// runtime-rs/src/state.rs
+// runtime-rs/src/state/mod.rs
 pub trait State {
     fn apply(&mut self, events: &[Event]) -> Result<(), StateError>;
     fn view(&self, session_id: &str) -> Result<SessionView, StateError>;
 }
-// runtime-rs/src/context.rs
+// runtime-rs/src/context/mod.rs
 pub trait ContextEngine {
     fn assemble(&self, session_id: &str, task_id: &str) -> Result<Context, ContextError>;
 }
-// runtime-rs/src/prompt.rs
+// runtime-rs/src/prompt/mod.rs
 pub trait PromptCompiler {
     fn compile(&self, ctx: &Context) -> Result<Messages, PromptError>;
 }
-// runtime-rs/src/llm.rs
+// runtime-rs/src/llm/mod.rs
 pub trait LLMProvider {
     fn chat(&self, msgs: &Messages, tools: &[Tool]) -> Result<LLMResponse, LLMError>;
 }
-// runtime-rs/src/executor.rs
+// runtime-rs/src/executor/mod.rs
 pub trait Executor {
     fn run(&self, turn: &Turn) -> Result<Vec<Event>, ExecutorError>;
 }
@@ -186,7 +186,7 @@ func (r *Runtime) Step(ctx context.Context, sessionID, taskID, turnID string) ([
 }
 ```
 
-**Rust:** `runtime-rs/src/runtime.rs`(签名等价,只列关键行)
+**Rust:** `runtime-rs/src/runtime/mod.rs`(签名等价,只列关键行)
 
 ```rust
 pub struct Runtime {
@@ -402,7 +402,7 @@ cargo test ch02
 - [ADR-002 · Runtime 数据流协议](../adr/ADR-002-dataflow-protocol.md)——本章的正式协议沉淀
 - 参考实现:
     - Go: [`runtime-go/runtime/runtime.go`](../runtime-go/runtime/runtime.go)、[`runtime-go/runtime/memfakes/memfakes.go`](../runtime-go/runtime/memfakes/memfakes.go)
-    - Rust: [`runtime-rs/src/runtime.rs`](../runtime-rs/src/runtime.rs)
+    - Rust: [`runtime-rs/src/runtime/mod.rs`](../runtime-rs/src/runtime/mod.rs)
 - 端到端 demo:
     - Go: [`runtime-go/examples/ch02/main.go`](../runtime-go/examples/ch02/main.go)
     - Rust: [`runtime-rs/examples/ch02/main.rs`](../runtime-rs/examples/ch02/main.rs)

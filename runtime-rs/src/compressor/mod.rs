@@ -8,12 +8,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::domain::Event;
-use crate::event_payloads::{
-    EventPayload, PayloadCompressionSkipped, PayloadContextCompressed,
+use crate::domain::{
+    Event, EventPayload, PayloadCompressionSkipped, PayloadContextCompressed, Summary,
 };
 use crate::state::{EventStore, State, StateError};
-use crate::summary::Summary;
 
 #[derive(Debug)]
 pub struct CompressorError(pub String);

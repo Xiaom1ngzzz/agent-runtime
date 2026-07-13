@@ -9,15 +9,14 @@ mod fakes;
 use std::sync::{Arc, Mutex};
 
 use agent_runtime_rs::domain::{
-    Budget, Event, LLMResponse, Message, SessionView, TaskStatus, Tool, ToolCall, TurnStatus,
-};
-use agent_runtime_rs::event_payloads::{
-    EventPayload, PayloadSessionOpened, PayloadTaskCreated, PayloadTaskEnded, PayloadTurnStarted,
-    PayloadUserSpoke,
+    Budget, Event, EventPayload, LLMResponse, Message, PayloadSessionOpened, PayloadTaskCreated,
+    PayloadTaskEnded, PayloadTurnStarted, PayloadUserSpoke, SessionView, TaskStatus, Tool,
+    ToolCall, TurnStatus,
 };
 use agent_runtime_rs::runtime::Runtime;
-use agent_runtime_rs::snapshot::{MemSnapshotStore, Snapshot, SnapshotStore};
-use agent_runtime_rs::state::{EventStore as _, State as _};
+use agent_runtime_rs::state::{
+    EventStore as _, MemSnapshotStore, Snapshot, SnapshotStore, State as _,
+};
 
 use fakes::{
     append_all, ContextEngineFake, EventStoreFake, ExecutorFake, LLMScript, PromptCompilerPassthrough,

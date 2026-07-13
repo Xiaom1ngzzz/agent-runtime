@@ -394,12 +394,13 @@ runtime-go/
     openai.go             (新: OpenAICompiler)
 
 runtime-rs/src/
-  prompt.rs               (扩展: ReferenceCompiler/AnthropicCompiler/OpenAICompiler 同文件)
+  prompt/
+    mod.rs                (扩展: ReferenceCompiler/AnthropicCompiler/OpenAICompiler 同文件)
 ```
 
 PromptStore(§6.8.2)未随本轮落地,见 §6.11 取舍。
 
-职责边界:六层 Layout 与 `<task_progress>` / `<prior_summary>` / `<memory_ref>` 渲染位于 `runtime-go/context/layered.go` 和 `runtime-rs/src/layered.rs`;本目录的 Compiler 接收已布局的 `Context.Messages`,执行 Type-check 与 Provider Emit。§6.5 Optimize 为后续扩展。
+职责边界:六层 Layout 与 `<task_progress>` / `<prior_summary>` / `<memory_ref>` 渲染位于 `runtime-go/context/layered.go` 和 `runtime-rs/src/context/layered.rs`;本目录的 Compiler 接收已布局的 `Context.Messages`,执行 Type-check 与 Provider Emit。§6.5 Optimize 为后续扩展。
 
 ### 6.10.2 端到端测试:两个 Provider 差异对比
 
@@ -453,7 +454,7 @@ Part II 到此结束。下一章 **Chapter 7 · Planner & Task Graph** 会展开
 - [ADR-003 · Runtime 与 DDD 对应关系](../adr/ADR-003-ddd-mapping.md)——PromptCompiler 是 Domain Service + Anti-Corruption Layer
 - 参考实现(Round 2 已落地):
   - Go: [`runtime-go/prompt/provider_request.go`](../runtime-go/prompt/provider_request.go)、[`runtime-go/prompt/reference.go`](../runtime-go/prompt/reference.go)、[`runtime-go/prompt/anthropic.go`](../runtime-go/prompt/anthropic.go)、[`runtime-go/prompt/openai.go`](../runtime-go/prompt/openai.go)
-  - Rust: [`runtime-rs/src/prompt.rs`](../runtime-rs/src/prompt.rs)
+  - Rust: [`runtime-rs/src/prompt/mod.rs`](../runtime-rs/src/prompt/mod.rs)
 - 相关章节:`ch04-context-engine.md`(§4.4 Layout 与 §4.8 Compile 引入)、`ch05-memory.md`(§5.5 Memory Refs 由 Project 渲染)、`ch07-planner.md`(Task Graph 与 TaskFrame/Progress 的关系)
 - 研究/工程参考:
   - Anthropic, *Prompt Caching* (2024) —— §6.5.3 依据

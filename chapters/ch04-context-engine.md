@@ -697,9 +697,12 @@ runtime-go/
     compressor.go      (新增: Compressor 接口 §4.5.1 + ByTurns 实现 + ScriptedSummarizer)
 
 runtime-rs/src/
-  layered.rs           (新增,对应 Go 的 layered.go)
-  summary.rs           (新增: Summary + Progress,对应 Go 的 domain/summary.go)
-  compressor.rs        (新增,对应 Go 的 compressor/)
+  context/
+    layered.rs         (新增,对应 Go 的 layered.go)
+  domain/
+    summary.rs         (新增: Summary + Progress,对应 Go 的 domain/summary.go)
+  compressor/
+    mod.rs             (新增,对应 Go 的 compressor/)
 ```
 
 §4.6.3 的增量 merge、自检与 SummaryStore、按 Task 边界触发的 Compressor 属于扩展,参考实现未单独包含(见 §4.11 取舍)。Progress 已覆盖 schema + Fold + Prompt 渲染,自动生成器留到 ch07。
@@ -756,7 +759,7 @@ runtime-rs/src/
 - [ADR-002 · Runtime 数据流协议](../adr/ADR-002-dataflow-protocol.md)——§Decision 里 Project 的"纯度"定义在本章反复应用
 - 参考实现(Round 2 已落地):
   - Go: [`runtime-go/context/layered.go`](../runtime-go/context/layered.go)、[`runtime-go/domain/summary.go`](../runtime-go/domain/summary.go)、[`runtime-go/compressor/compressor.go`](../runtime-go/compressor/compressor.go)
-  - Rust: [`runtime-rs/src/layered.rs`](../runtime-rs/src/layered.rs)、[`runtime-rs/src/summary.rs`](../runtime-rs/src/summary.rs)、[`runtime-rs/src/compressor.rs`](../runtime-rs/src/compressor.rs)
+  - Rust: [`runtime-rs/src/context/layered.rs`](../runtime-rs/src/context/layered.rs)、[`runtime-rs/src/domain/summary.rs`](../runtime-rs/src/domain/summary.rs)、[`runtime-rs/src/compressor/mod.rs`](../runtime-rs/src/compressor/mod.rs)
 - 相关章节:`ch01-runtime-domain.md`(六层 Context 与 §1.4 对应)、`ch02-runtime-dataflow.md`(§2.5 纯度约束)、`ch03-state-event.md`(§3.5 SessionView 的最小字段)、`ch05-memory.md`(Memory Refs 展开)、`ch06-prompt-compiler.md`(Provider Type-check / Emit)、`ch07-planner.md`(Task Graph 与 Progress 关系)
 - 研究/工程参考:
   - Nelson Liu et al., *Lost in the Middle: How Language Models Use Long Contexts* (2023)

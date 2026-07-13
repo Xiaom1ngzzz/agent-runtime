@@ -5,13 +5,11 @@ mod fakes;
 
 use std::sync::{Arc, Mutex};
 
-use agent_runtime_rs::context::ContextEngine;
-use agent_runtime_rs::domain::Event;
-use agent_runtime_rs::event_payloads::{
-    EventPayload, PayloadMemoryQueried, PayloadSessionOpened, PayloadTaskCreated,
+use agent_runtime_rs::context::{ContextEngine, LayeredContextEngine};
+use agent_runtime_rs::domain::{
+    Event, EventPayload, PayloadMemoryQueried, PayloadSessionOpened, PayloadTaskCreated,
     PayloadTurnStarted, PayloadUserSpoke,
 };
-use agent_runtime_rs::layered::LayeredContextEngine;
 use agent_runtime_rs::memory::{embed_text, InMemStore, MemoryItem, MemoryKind, MemoryStore, Query};
 use agent_runtime_rs::state::{EventStore as _, State as _};
 

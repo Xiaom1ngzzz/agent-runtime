@@ -2,12 +2,16 @@
 //! 与 `runtime-go/domain/domain.go` 逐字段对齐。
 //! 只包含数据结构，不含行为——行为在各操作模块中。
 
+pub mod summary;
+pub mod event_payloads;
+
+pub use event_payloads::*;
+pub use summary::*;
+
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 use std::time::SystemTime;
-
-use crate::event_payloads::EventPayload;
 
 // ---------- 三层聚合 ----------
 
@@ -92,10 +96,6 @@ pub struct Event {
     pub seq: i64,
 }
 
-/// 参见 `event_payloads.rs`。Rust 用 enum 表达 marker interface。
-/// 每个 variant 对应 Go 版中的一个 EventType。
-pub use crate::event_payloads::EventType;
-
 // ---------- LLM 交互类型 ----------
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -162,11 +162,11 @@ pub struct SessionView {
     // ---------- ch04 Context 相关字段 ----------
 
     /// 最近几个 Turn 的原文引用。ch04 §4.4.1。
-    pub working_set: Vec<crate::summary::TurnDigest>,
+    pub working_set: Vec<TurnDigest>,
     /// 已生成的所有结构化摘要。key = seq 起点。
-    pub summaries: HashMap<i64, crate::summary::Summary>,
+    pub summaries: HashMap<i64, Summary>,
     /// 跨 Session 检索出的相关片段(ch05 展开)。
-    pub memory_refs: Vec<crate::summary::MemoryRef>,
+    pub memory_refs: Vec<MemoryRef>,
     /// 每个 Task 的进度快照。ch04 §4.7。
-    pub progresses: HashMap<String, crate::summary::Progress>,
+    pub progresses: HashMap<String, Progress>,
 }

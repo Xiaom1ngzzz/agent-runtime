@@ -8,8 +8,7 @@ mod sample;
 
 use std::collections::HashSet;
 
-use agent_runtime_rs::domain::{TaskStatus, TurnStatus};
-use agent_runtime_rs::event_payloads::EventPayload;
+use agent_runtime_rs::domain::{EventPayload, TaskStatus, TurnStatus};
 
 #[test]
 fn ch01_sample_replay() {

@@ -9,12 +9,10 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use agent_runtime_rs::domain::{
-    Budget, Event, Message, SessionView, Task, TaskStatus, ToolCall, Turn, TurnStatus,
-};
-use agent_runtime_rs::event_payloads::{
-    EventPayload, PayloadLLMReplied, PayloadLLMRequested, PayloadSessionOpened,
-    PayloadTaskCreated, PayloadTaskEnded, PayloadToolCalled, PayloadToolReturned,
-    PayloadTurnEnded, PayloadTurnStarted, PayloadUserSpoke,
+    Budget, Event, EventPayload, Message, PayloadLLMReplied, PayloadLLMRequested,
+    PayloadSessionOpened, PayloadTaskCreated, PayloadTaskEnded, PayloadToolCalled,
+    PayloadToolReturned, PayloadTurnEnded, PayloadTurnStarted, PayloadUserSpoke, SessionView,
+    Task, TaskStatus, ToolCall, Turn, TurnStatus,
 };
 
 /// 生成第一章 §1.6 的样本 Event 流。

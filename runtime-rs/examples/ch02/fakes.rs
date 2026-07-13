@@ -10,10 +10,8 @@ use std::time::SystemTime;
 
 use agent_runtime_rs::context::{ContextEngine, ContextError};
 use agent_runtime_rs::domain::{
-    Context, Event, LLMResponse, Message, Session, SessionView, Task, TaskStatus, Tool, Turn, TurnStatus,
-};
-use agent_runtime_rs::event_payloads::{
-    EventPayload, PayloadToolCalled, PayloadToolReturned,
+    Context, Event, EventPayload, LLMResponse, Message, PayloadToolCalled, PayloadToolReturned,
+    Session, SessionView, Task, TaskStatus, Tool, Turn, TurnDigest, TurnStatus,
 };
 use agent_runtime_rs::executor::{Executor, ExecutorError};
 use agent_runtime_rs::llm::{LLMError, LLMProvider};
@@ -185,7 +183,7 @@ fn apply_one(view: &mut SessionView, e: &Event) {
                 index = t.index;
             }
             // ch04: 追加 TurnDigest 到 WorkingSet(§4.4.1)。
-            view.working_set.push(agent_runtime_rs::summary::TurnDigest {
+            view.working_set.push(TurnDigest {
                 turn_id: e.turn_id.clone(),
                 task_id: e.task_id.clone(),
                 index,

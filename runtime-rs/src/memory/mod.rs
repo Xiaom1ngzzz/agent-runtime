@@ -8,7 +8,7 @@ use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 
-use crate::summary::MemoryRef;
+use crate::domain::MemoryRef;
 
 /// MemoryItem 是 Memory 层的存储单位。§5.3。
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

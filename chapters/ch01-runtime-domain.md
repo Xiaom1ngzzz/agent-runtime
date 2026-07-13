@@ -104,7 +104,7 @@ Session  ──  一段用户与系统的关系
           └─ Event  ──  一次原子的状态变化
 ```
 
-对应结构见 [`runtime-go/domain/domain.go`](../runtime-go/domain/domain.go) 与 [`runtime-rs/src/domain.rs`](../runtime-rs/src/domain.rs)——两份实现字段逐一对齐,任选一种阅读。下面挨个说。
+对应结构见 [`runtime-go/domain/domain.go`](../runtime-go/domain/domain.go) 与 [`runtime-rs/src/domain/mod.rs`](../runtime-rs/src/domain/mod.rs)——两份实现字段逐一对齐,任选一种阅读。下面挨个说。
 
 ### Session — 会话周期
 
@@ -307,7 +307,7 @@ type PayloadToolReturned struct {
 
 消费方类型安全地断言:`payload, ok := evt.Payload.(PayloadToolCalled)`。
 
-**Rust:封闭 enum**。完整定义见 [`runtime-rs/src/event_payloads.rs`](../runtime-rs/src/event_payloads.rs)。
+**Rust:封闭 enum**。完整定义见 [`runtime-rs/src/domain/event_payloads.rs`](../runtime-rs/src/domain/event_payloads.rs)。
 
 ```rust
 pub enum EventPayload {
@@ -438,27 +438,27 @@ type EventStore interface {
 **Rust:**
 
 ```rust
-// runtime-rs/src/context.rs
+// runtime-rs/src/context/mod.rs
 pub trait ContextEngine {
     fn assemble(&self, session_id: &str, task_id: &str) -> Result<Context, ContextError>;
 }
 
-// runtime-rs/src/prompt.rs
+// runtime-rs/src/prompt/mod.rs
 pub trait PromptCompiler {
     fn compile(&self, ctx: &Context) -> Result<Messages, PromptError>;
 }
 
-// runtime-rs/src/llm.rs
+// runtime-rs/src/llm/mod.rs
 pub trait LLMProvider {
     fn chat(&self, msgs: &Messages, tools: &[Tool]) -> Result<LLMResponse, LLMError>;
 }
 
-// runtime-rs/src/executor.rs
+// runtime-rs/src/executor/mod.rs
 pub trait Executor {
     fn run(&self, turn: &Turn) -> Result<Vec<Event>, ExecutorError>;
 }
 
-// runtime-rs/src/state.rs
+// runtime-rs/src/state/mod.rs
 pub trait State {
     fn apply(&mut self, events: &[Event]) -> Result<(), StateError>;
     fn view(&self, session_id: &str) -> Result<SessionView, StateError>;
@@ -687,7 +687,7 @@ Go 的 marker interface 与 Rust 的封闭 enum（见 §1.3）都需要一张 `E
 
 - [ADR-001 · Runtime 的边界与职责](../adr/ADR-001-runtime-domain.md)
 - 参考实现（Go）:[`runtime-go/domain/domain.go`](../runtime-go/domain/domain.go)、[`runtime-go/context/context.go`](../runtime-go/context/context.go)、[`runtime-go/state/state.go`](../runtime-go/state/state.go)
-- 参考实现（Rust）:[`runtime-rs/src/domain.rs`](../runtime-rs/src/domain.rs)、[`runtime-rs/src/context.rs`](../runtime-rs/src/context.rs)、[`runtime-rs/src/state.rs`](../runtime-rs/src/state.rs)
+- 参考实现（Rust）:[`runtime-rs/src/domain/mod.rs`](../runtime-rs/src/domain/mod.rs)、[`runtime-rs/src/context/mod.rs`](../runtime-rs/src/context/mod.rs)、[`runtime-rs/src/state/mod.rs`](../runtime-rs/src/state/mod.rs)
 - 图源:[`diagrams/ch01-object-model.mmd`](../diagrams/ch01-object-model.mmd)、[`diagrams/ch01-turn-sequence.mmd`](../diagrams/ch01-turn-sequence.mmd)
 - 相关章节:`ch02-runtime-dataflow.md`、`ch03-state-event.md`、`ch07-planner.md`
 - Michael Nygard, _Documenting Architecture Decisions_ (2011)

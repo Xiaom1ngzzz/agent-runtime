@@ -16,14 +16,14 @@
 - [x] `chapters/ch04-context-engine.md` —— Context Engine（文字，代码 Round 2 落地）
 - [x] `chapters/ch05-memory.md` —— Memory Architecture（文字，代码 Round 2 落地）
 - [x] `chapters/ch06-prompt-compiler.md` —— Prompt Compiler（文字，代码 Round 2 落地）
-- [x] `runtime-go/{context,compressor,memory,prompt}/` & `runtime-rs/src/{context,layered,compressor,memory,prompt}.rs` —— ch04–ch06 Round 2 参考实现与测试
+- [x] `runtime-go/{context,compressor,memory,prompt}/` & `runtime-rs/src/{context,compressor,memory,prompt}/` —— ch04–ch06 Round 2 参考实现与测试
 
 ## Part III — Execution（执行系统）
 
 - [ ] `chapters/ch07-planner.md` —— Planner & Task Graph
 - [ ] `chapters/ch08-executor.md` —— Executor
 - [ ] `chapters/ch09-checkpoint.md` —— Checkpoint & Recovery
-- [ ] `runtime-go/state/` & `runtime-rs/src/state.rs` —— 状态 / 事件 / Checkpoint 参考实现
+- [ ] `runtime-go/state/` & `runtime-rs/src/state/` —— 状态 / 事件 / Checkpoint 参考实现
 
 ## Part IV — Evolution（演进）
 

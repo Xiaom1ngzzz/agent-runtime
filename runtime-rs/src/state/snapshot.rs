@@ -5,8 +5,8 @@
 
 use std::collections::HashMap;
 
+use super::StateError;
 use crate::domain::SessionView;
-use crate::state::StateError;
 
 /// "折叠到 seq 为止的 View"的镜像。
 #[derive(Debug, Clone, Default)]

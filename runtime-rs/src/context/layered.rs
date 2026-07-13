@@ -9,11 +9,11 @@
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
-use crate::context::{ContextEngine, ContextError};
-use crate::domain::{Context, Event, Message, Task, Tool};
-use crate::event_payloads::EventPayload;
+use super::{ContextEngine, ContextError};
+use crate::domain::{
+    Context, Event, EventPayload, MemoryRef, Message, Progress, Summary, Task, Tool, TurnDigest,
+};
 use crate::state::{EventStore, State};
-use crate::summary::{MemoryRef, Progress, Summary, TurnDigest};
 
 /// ch04 §4.4 的落地实现。
 ///

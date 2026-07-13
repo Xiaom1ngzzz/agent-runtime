@@ -8,7 +8,7 @@
 
 mod sample;
 
-use agent_runtime_rs::event_payloads::EventPayload;
+use agent_runtime_rs::domain::EventPayload;
 
 fn main() {
     let events = sample::ch01_sample();

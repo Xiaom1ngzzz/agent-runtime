@@ -7,8 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{Budget, Message, TaskStatus, Tool, ToolCall, TurnStatus};
-use crate::summary::{MemoryRef, Progress, Summary};
+use super::summary::{MemoryRef, Progress, Summary};
+use super::{Budget, Message, TaskStatus, Tool, ToolCall, TurnStatus};
 
 /// EventType 与 Payload 的 discriminant 合并成一个类型。
 /// 判别一个 Event 的类型 = match 它的 Payload。
