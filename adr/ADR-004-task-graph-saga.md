@@ -47,5 +47,5 @@ ADR-003 明确暂缓 Saga / Process Manager,触发条件是"ch07 引入 sub-Task
 ## References
 
 - [ch07 · 规划器与任务图](../chapters/ch07-planner.md)
-- [ADR-003 §“未采用的 DDD 部分 · Saga”](ADR-003-ddd-mapping.md)
+- [ADR-003 §"未采用的 DDD 部分 · Saga"](ADR-003-ddd-mapping.md)
 - Hector Garcia-Molina et al., *Sagas* (1987)

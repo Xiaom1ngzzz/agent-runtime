@@ -2,6 +2,8 @@
 
 > 第一、二部分把"一次 Turn 怎么跑"讲清楚了。生产 Agent 的目标很少是单步的——"查天气 + 发邮件"天然是两件事。这一章把扁平 Task 打开成 **Task Graph**,并引入 **Planner** 与最小 **Saga** 协调。
 
+> **写法上的变化**:第一、二部分为建立方法论,反复用"反例 → 后果 → 正确做法"和逐章的失败退化表展开。方法论已经立住,第三、四部分(ch07–ch10)转为更紧凑的协议规格与取舍记录,不再重复同一套演示——这是有意的收紧,呼应各章"实现状态"标注里对当前落地边界的诚实说明,而不是内容被裁剪。
+
 ---
 
 ## 7.1 问题:一个 Goal 装不下两件事
@@ -138,7 +140,7 @@ cd runtime-rs && cargo test ch07_task_graph
 
 ## 7.8 取舍记录
 
-| 决策 | 选择 | 代价 | 推翻条件 |
+| 决策 | 选择 | 代价 | 什么情况下会被推翻 |
 |------|------|------|----------|
 | 拆分启发式 | Goal 按 `" + "` 分割 | 真实 Planner 应用 LLM | 引入 LLM Planner 时换策略,接口不变 |
 | 图存储 | 派生自 Tasks,不单独表 | 深查询要遍历 map | 图查询成为热路径再物化 |
@@ -163,4 +165,5 @@ cd runtime-rs && cargo test ch07_task_graph
 - [ADR-003 · DDD 对应](../adr/ADR-003-ddd-mapping.md)
 - Go: [`runtime-go/planner/graph.go`](../runtime-go/planner/graph.go)
 - Rust: [`runtime-rs/src/planner/mod.rs`](../runtime-rs/src/planner/mod.rs)
+- 结构图:[`diagrams/ch07-task-graph.mmd`](../diagrams/ch07-task-graph.mmd)
 - 相关:`ch01`(扁平 Task)、`ch04`(Progress)、`ch08`(Executor)

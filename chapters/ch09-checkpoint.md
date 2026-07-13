@@ -51,7 +51,7 @@ ch03 §3.4.4 的 Outbox / Subscribe 仍标为扩展。Round 2 基线保持方案
 
 ### 9.3.4 跨机器
 
-跨进程恢复还需要稳定的 Checkpoint wire DTO、校验和与原子写入。Round 2 只用内存 Store 证明“版本匹配则增量 replay、版本不匹配则全量 replay”的算法;ch03 的 Event wire JSON 不能直接等同于 Checkpoint 格式。
+跨进程恢复还需要稳定的 Checkpoint wire DTO、校验和与原子写入。Round 2 只用内存 Store 证明"版本匹配则增量 replay、版本不匹配则全量 replay"的算法;ch03 的 Event wire JSON 不能直接等同于 Checkpoint 格式。
 
 ---
 
@@ -80,13 +80,13 @@ cd runtime-rs && cargo test ch09_checkpoint
 
 断言:Turn 边界拍照 → 追加 TaskEnded → Recover 只 replay 1 条 → Progress/WorkingSet 仍在;克隆不被调用方污染;schema 不匹配时退回全量 replay。
 
-`TakeCheckpoint` 本身不检查最后一条 Event 是否为 `TurnEnded`;“只在 Turn 边界调用”是当前协调层约定,不是 API 已强制的不变量。
+`TakeCheckpoint` 本身不检查最后一条 Event 是否为 `TurnEnded`;"只在 Turn 边界调用"是当前协调层约定,不是 API 已强制的不变量。
 
 ---
 
 ## 9.6 取舍记录
 
-| 决策 | 选择 | 代价 | 推翻条件 |
+| 决策 | 选择 | 代价 | 什么情况下会被推翻 |
 |------|------|------|----------|
 | Checkpoint 时机 | 调用方约定在 Turn 边界 | API 不验证边界,长工具中间不可恢复 | 协调器校验或 submit/resume 点另拍 |
 | schema 策略 | 不匹配则丢弃 | 大 Session 恢复变慢 | 引入迁移函数 |
