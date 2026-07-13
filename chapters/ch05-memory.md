@@ -70,13 +70,13 @@ let system_prompt = format!(
 ### 5.2.1 Memory 的三层
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  Working Memory   (Session 内的临时状态,如 scratchpad)         │← 其实是 Context 的一部分,ch04 讲过
-├──────────────────────────────────────────────────────────────┤
-│  Episodic Memory  (发生过的事,跨 Session:上周的对话摘要)         │← 由 Compressor 归档过来
-├──────────────────────────────────────────────────────────────┤
-│  Semantic Memory  (稳定的事实与偏好:用户信息、KB 文档、schema)    │← 由业务或人工写入
-└──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│ Working Memory   (Session 内 scratchpad / 临时状态)              │← Context 层(ch04)
+├────────────────────────────────────────────────────────────────┤
+│ Episodic Memory  (跨 Session 对话摘要)                           │← Compressor 归档
+├────────────────────────────────────────────────────────────────┤
+│ Semantic Memory  (用户偏好 / KB / schema 等稳定事实)              │← 业务或人工写入
+└────────────────────────────────────────────────────────────────┘
 ```
 
 **读法**:
@@ -92,7 +92,7 @@ let system_prompt = format!(
 ch04 §4.2 第 5 层是 `Memory Refs`。ch05 的 MemoryStore 就是这一层的**后端**。数据流:
 
 ```
-业务 / Compressor  →  MemoryStore.Upsert    (写入)
+业务 / Compressor  →  MemoryStore.Upsert            (写入)
                           ↓
                     (存储 + 索引)
                           ↓
@@ -100,7 +100,7 @@ Compressor / 上层 Loop → MemoryStore.Query  →  MemoryQueried Event
                                                     ↓
                                               Fold → SessionView.MemoryRefs
                                                     ↓
-                                     LayeredContextEngine.Assemble (纯)
+LayeredContextEngine.Assemble                       (纯)
 ```
 
 **关键**:检索(`Query`)**不发生在 Assemble 里**(违反 ADR-002 的纯度约束)。检索发生在上层 Loop 或 Compressor 里,产出 `MemoryQueried` Event,Fold 后 SessionView 就自然带着 `MemoryRefs`。Assemble 只读事实。
