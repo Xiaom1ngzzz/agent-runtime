@@ -1,0 +1,525 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5" pages="4">
+  <diagram name="1-仓库整体架构" id="repo-overview">
+    <mxGraphModel dx="1364" dy="848" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title1" value="agent-runtime-book 仓库整体架构" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+          <mxGeometry x="400" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle1" value="从第一原理构建 Agent Runtime —— 书籍 + Go/Rust 双参考实现" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="350" y="60" width="700" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="root-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#333333;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="40" y="110" width="1320" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="book-group" value="书籍内容 (Book)" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="60" y="140" width="380" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="book-chapters" value="chapters/&#xa;ch01 领域模型 · ch02 数据流 · ch03 状态事件&#xa;ch04 上下文引擎 · ch05 记忆 · ch06 Prompt&#xa;ch07 规划器 · ch08 执行器 · ch09 检查点&#xa;ch10 评测 · ch11 生产边界" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=12;" parent="book-group" vertex="1">
+          <mxGeometry x="20" y="45" width="340" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="book-meta" value="BOOK.md — 目标与写作原则&#xa;ROADMAP.md — 大纲与工程进度&#xa;STYLE_GUIDE.md — 写作约定" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;align=left;spacingLeft=10;fontSize=12;" parent="book-group" vertex="1">
+          <mxGeometry x="20" y="170" width="340" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="book-milestones" value="里程碑: M1 基础 → M2 上下文 → M3 执行 → M4 演进 → M5 生产" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;fontSize=11;fontStyle=2;" parent="book-group" vertex="1">
+          <mxGeometry x="20" y="255" width="340" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="book-part" value="五部分: 基础 | 上下文 | 执行 | 演进 | 生产边界" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=center;fontSize=11;" parent="book-group" vertex="1">
+          <mxGeometry x="20" y="300" width="340" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="adr-group" value="架构决策 (ADR)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="470" y="140" width="380" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="adr-core" value="核心 ADR&#xa;ADR-001 Runtime 边界与职责&#xa;ADR-002 数据流协议 (Fold/Project/Compile/Chat/Emit)&#xa;ADR-003 DDD 对应关系 (ES + CQRS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;align=left;spacingLeft=10;fontSize=12;" parent="adr-group" vertex="1">
+          <mxGeometry x="20" y="45" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="adr-exec" value="执行 ADR&#xa;ADR-004 任务图与 Saga&#xa;ADR-005 Session 并发与租约&#xa;ADR-006 Command/Event 幂等&#xa;ADR-007 工具副作用协议" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;align=left;spacingLeft=10;fontSize=12;" parent="adr-group" vertex="1">
+          <mxGeometry x="20" y="145" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="adr-prod" value="生产 ADR&#xa;ADR-008 Runtime 安全边界&#xa;ADR-009 数据保留与删除" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;align=left;spacingLeft=10;fontSize=12;" parent="adr-group" vertex="1">
+          <mxGeometry x="20" y="245" width="340" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="impl-group" value="参考实现 (Reference Runtime)" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="880" y="140" width="460" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="impl-go" value="runtime-go/ (Go)&#xa;domain · state · runtime · context&#xa;prompt · llm · executor · planner&#xa;compressor · memory · eval · memfakes&#xa;examples/ch02 · examples/m3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;align=left;spacingLeft=10;fontSize=12;" parent="impl-group" vertex="1">
+          <mxGeometry x="20" y="45" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="impl-rs" value="runtime-rs/ (Rust)&#xa;src/domain · state · runtime&#xa;context · prompt · llm · executor&#xa;planner · compressor · memory · eval&#xa;tests/ · examples/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;align=left;spacingLeft=10;fontSize=12;" parent="impl-group" vertex="1">
+          <mxGeometry x="240" y="45" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="impl-note" value="Go / Rust 逐字段对齐&#xa;同一领域模型 + 6 接口协议 + 5 段数据流" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=center;fontSize=11;fontStyle=2;" parent="impl-group" vertex="1">
+          <mxGeometry x="20" y="190" width="420" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="impl-build" value="go build ./...  ·  cargo build  ·  go test ./examples/..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;fontSize=11;" parent="impl-group" vertex="1">
+          <mxGeometry x="20" y="245" width="420" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="impl-m3" value="M3 端到端: Planner → Runtime.Step → Executor → Checkpoint → Eval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;fontSize=11;" parent="impl-group" vertex="1">
+          <mxGeometry x="20" y="290" width="420" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="support-group" value="支撑资产" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="60" y="510" width="1280" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="support-diagrams" value="diagrams/&#xa;Mermaid (.mmd) + draw.io (.drawio)&#xa;架构图 · 时序图 · 对象模型" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=12;" parent="support-group" vertex="1">
+          <mxGeometry x="20" y="45" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="support-docs" value="docs/ + mkdocs.yml&#xa;MkDocs 站点 (符号链接)&#xa;在线: xiaom1ngzzz.github.io/agent-runtime" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=12;" parent="support-group" vertex="1">
+          <mxGeometry x="320" y="45" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="support-fixtures" value="fixtures/&#xa;样本 Event 流&#xa;Golden 测试数据" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=12;" parent="support-group" vertex="1">
+          <mxGeometry x="620" y="45" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="support-ci" value=".github/&#xa;CI 构建与测试" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=12;" parent="support-group" vertex="1">
+          <mxGeometry x="840" y="45" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-group" value="Runtime 外部边界 (不在 Runtime 内)" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;" parent="support-group" vertex="1">
+          <mxGeometry x="20" y="150" width="1240" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-llm" value="LLM Provider&#xa;(OpenAI / Anthropic / …)&#xa;接口: LLMProvider.Chat" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-group" vertex="1">
+          <mxGeometry x="20" y="40" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-tools" value="Tool Runtime&#xa;(业务工具实现)&#xa;接口: Executor + Registry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-group" vertex="1">
+          <mxGeometry x="220" y="40" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-storage" value="Storage 后端&#xa;(EventStore / Snapshot / Memory)&#xa;接口: Repository 模式" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-group" vertex="1">
+          <mxGeometry x="420" y="40" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-ui" value="前端 UI / 产品逻辑&#xa;(不在 Runtime 边界内)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-group" vertex="1">
+          <mxGeometry x="640" y="40" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-upper" value="Upper Loop (调用方)&#xa;Session 生命周期 · 重试 · 租约 · Planner 触发" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-group" vertex="1">
+          <mxGeometry x="840" y="40" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-obs" value="可观测性&#xa;Trace / Span / Eval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-group" vertex="1">
+          <mxGeometry x="1080" y="40" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;dashed=1;endArrow=classic;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="book-chapters" target="impl-go" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="450" y="240" />
+              <mxPoint x="450" y="120" />
+              <mxPoint x="860" y="120" />
+              <mxPoint x="860" y="218" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e1-label" value="章节驱动实现" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#666666;" parent="e1" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;dashed=1;endArrow=classic;endFill=1;" parent="1" source="adr-core" target="impl-go" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2-label" value="ADR 约束代码" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#666666;" parent="e2" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="2-领域模型" id="domain-model">
+    <mxGraphModel dx="1605" dy="998" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title2" value="Runtime 领域模型 (ch01 + ADR-003)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+          <mxGeometry x="400" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle2" value="Event Sourcing + CQRS · Session 为 Aggregate Root" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="350" y="60" width="700" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="session" value="Session (Entity / Aggregate Root)&#xa;─────────────&#xa;ID · Principal · CreatedAt · LastActiveAt · Metadata" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;align=center;" parent="1" vertex="1">
+          <mxGeometry x="520" y="120" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="task" value="Task (Entity)&#xa;─────────────&#xa;ID · SessionID · ParentID · Goal · Status · Budget" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;align=center;" parent="1" vertex="1">
+          <mxGeometry x="520" y="260" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="turn" value="Turn (Entity)&#xa;─────────────&#xa;ID · TaskID · Index · Status · StartSeq · Tokens · Cost" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=13;align=center;" parent="1" vertex="1">
+          <mxGeometry x="520" y="400" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="event" value="Event (Domain Event / 事实记录)&#xa;─────────────&#xa;ID · Type · Payload* · Seq · CausedBy · TS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=13;align=center;" parent="1" vertex="1">
+          <mxGeometry x="520" y="540" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e-s-t" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="session" target="task" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-s-t-l" value="1 : N  contains" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" parent="e-s-t" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="20" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-u" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="task" target="turn" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-t-u-l" value="1 : N  contains" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" parent="e-t-u" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="20" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-u-e" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="turn" target="event" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-u-e-l" value="1 : N  emits" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" parent="e-u-e" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="20" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vo-group" value="Value Objects (不可变 · 无独立 ID)" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="60" y="120" width="400" height="500" as="geometry" />
+        </mxCell>
+        <mxCell id="vo-msg" value="Message · ToolCall · ToolResult · LLMResponse" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=12;" parent="vo-group" vertex="1">
+          <mxGeometry x="20" y="45" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="vo-ctx" value="Context · Summary · Progress · Step · TurnDigest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=12;" parent="vo-group" vertex="1">
+          <mxGeometry x="20" y="95" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="vo-mem" value="MemoryRef · MemoryItem · Query" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=12;" parent="vo-group" vertex="1">
+          <mxGeometry x="20" y="145" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="vo-payload" value="Payload* (typed per EventType)&#xa;SessionOpened · TaskCreated/Ended · TurnStarted/Ended&#xa;UserSpoke · LLMRequested/Replied · ToolCalled/Returned&#xa;ContextCompressed · ProgressUpdated · MemoryQueried · …" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=11;" parent="vo-group" vertex="1">
+          <mxGeometry x="20" y="195" width="360" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="vo-graph" value="TaskGraph · BuildTaskGraph (ch07)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=12;" parent="vo-group" vertex="1">
+          <mxGeometry x="20" y="295" width="360" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="es-group" value="Event Sourcing + CQRS" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="990" y="120" width="400" height="500" as="geometry" />
+        </mxCell>
+        <mxCell id="es-write" value="写侧 (Command)&#xa;EventStore.Append + State.Apply&#xa;约束 C1: 单向 · C2: 确定性 Fold" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;align=left;spacingLeft=10;fontSize=12;" parent="es-group" vertex="1">
+          <mxGeometry x="20" y="45" width="360" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="es-read" value="读侧 (Query)&#xa;SessionView = Fold([]Event)&#xa;WorkingSet · Summaries · MemoryRefs · Progresses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;align=left;spacingLeft=10;fontSize=12;" parent="es-group" vertex="1">
+          <mxGeometry x="20" y="130" width="360" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="es-repo" value="Repository 接口&#xa;EventStore · SnapshotStore · SummaryStore · MemoryStore" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;align=left;spacingLeft=10;fontSize=12;" parent="es-group" vertex="1">
+          <mxGeometry x="20" y="215" width="360" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="es-snap" value="Snapshot Pattern (ch09)&#xa;Turn 边界拍照 · Checkpoint 跨进程恢复" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;align=left;spacingLeft=10;fontSize=12;" parent="es-group" vertex="1">
+          <mxGeometry x="20" y="285" width="360" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="es-rule" value="❌ 禁止就地修改 SessionView&#xa;✅ 追加 Event → Fold 自然推进状态" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;fontSize=11;fontStyle=1;" parent="es-group" vertex="1">
+          <mxGeometry x="20" y="355" width="360" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="es-pkg" value="代码: runtime-go/domain/ · runtime-rs/src/domain/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=center;fontSize=11;" parent="es-group" vertex="1">
+          <mxGeometry x="20" y="420" width="360" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="e-ev-view" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673a6;strokeWidth=2;dashed=1;endArrow=classic;endFill=1;curved=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="event" target="es-read" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="580" />
+              <mxPoint x="900" y="285" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-ev-view-l" value="Fold ([]Event → SessionView)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontColor=#9673a6;fontStyle=1;" parent="e-ev-view" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="11" y="-38" as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="3-Runtime模块分层" id="module-layers">
+    <mxGraphModel dx="1364" dy="848" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title3" value="Runtime 模块分层 (runtime-go / runtime-rs)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+          <mxGeometry x="350" y="15" width="700" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="upper-loop" value="Upper Loop (调用方 · 不在 runtime 包内)" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="60" y="70" width="1280" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ul-lc" value="生命周期事件&#xa;SessionOpened · TaskCreated · TurnStarted" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="upper-loop" vertex="1">
+          <mxGeometry x="20" y="40" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ul-pl" value="planner/&#xa;Planner.Plan · SagaCoordinator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="upper-loop" vertex="1">
+          <mxGeometry x="260" y="40" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ul-cp" value="compressor/&#xa;Compressor.Tick (GC 压缩)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="upper-loop" vertex="1">
+          <mxGeometry x="480" y="40" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ul-mem" value="memory/&#xa;MemoryStore.Query" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="upper-loop" vertex="1">
+          <mxGeometry x="700" y="40" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ul-retry" value="重试 · 租约 · Budget · 并发控制 (ADR-005/006)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="upper-loop" vertex="1">
+          <mxGeometry x="900" y="40" width="280" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="orch" value="runtime/ — Runtime 协调器 (Runtime.Step)" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="60" y="200" width="1280" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="orch-desc" value="串联 6 接口 · 严格顺序 Fold+Project → Compile → Chat → Emit · Append+Apply 成对执行" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;align=center;fontSize=12;fontStyle=2;" parent="orch" vertex="1">
+          <mxGeometry x="20" y="40" width="1240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="pipeline" value="Runtime.Step 五段管道 (ADR-002)" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="60" y="320" width="1280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p-fold" value="① Fold&#xa;state/&#xa;State.Apply + View&#xa;[]Event → SessionView&#xa;【纯】" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=center;fontSize=11;fontStyle=0;" parent="pipeline" vertex="1">
+          <mxGeometry x="20" y="45" width="170" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="p-proj" value="② Project&#xa;context/&#xa;ContextEngine.Assemble&#xa;SessionView → Context&#xa;【纯】" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=center;fontSize=11;" parent="pipeline" vertex="1">
+          <mxGeometry x="210" y="45" width="170" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="p-comp" value="③ Compile&#xa;prompt/&#xa;PromptCompiler.Compile&#xa;Context → Messages&#xa;【纯】" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=center;fontSize=11;" parent="pipeline" vertex="1">
+          <mxGeometry x="400" y="45" width="170" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="p-chat" value="④ Chat&#xa;llm/&#xa;LLMProvider.Chat&#xa;Messages → LLMResponse&#xa;【副作用·网络】" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;align=center;fontSize=11;" parent="pipeline" vertex="1">
+          <mxGeometry x="590" y="45" width="170" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="p-emit" value="⑤ Emit&#xa;executor/&#xa;Executor.Run&#xa;LLMResponse → []Event&#xa;【副作用·工具】" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;align=center;fontSize=11;" parent="pipeline" vertex="1">
+          <mxGeometry x="780" y="45" width="170" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="p-es" value="EventStore&#xa;(state/)&#xa;Append-only 日志&#xa;Seq 单调递增" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;align=center;fontSize=11;" parent="pipeline" vertex="1">
+          <mxGeometry x="990" y="55" width="130" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="p-eval" value="eval/&#xa;CompareStreams&#xa;确定性评测 (ch10)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=center;fontSize=11;" parent="pipeline" vertex="1">
+          <mxGeometry x="1140" y="65" width="120" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pa1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=block;endFill=1;" parent="pipeline" source="p-fold" target="p-proj" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pa2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=block;endFill=1;" parent="pipeline" source="p-proj" target="p-comp" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pa3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=block;endFill=1;" parent="pipeline" source="p-comp" target="p-chat" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pa4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;strokeWidth=2;endArrow=block;endFill=1;" parent="pipeline" source="p-chat" target="p-emit" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pa5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d6b656;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" parent="pipeline" source="p-emit" target="p-es" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pa6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d6b656;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" parent="pipeline" source="p-es" target="p-fold" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1055" y="30" />
+              <mxPoint x="105" y="30" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="domain-layer" value="domain/ — 纯数据层 (无行为 · 无 IO)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="60" y="550" width="620" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="domain-desc" value="Session · Task · Turn · Event · SessionView · Context · Payload* · TaskGraph · Summary · MemoryItem&#xa;所有上层模块的唯一共享类型源 · 编译器强制类型化 (禁止 map[string]any)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;align=left;spacingLeft=10;fontSize=12;" parent="domain-layer" vertex="1">
+          <mxGeometry x="20" y="40" width="580" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="state-layer" value="state/ — 持久化与恢复" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="720" y="550" width="620" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="state-desc" value="EventStore · State(Fold) · SnapshotStore · CheckpointStore · RecoverableState · wire.go (JSON DTO)&#xa;memfakes/ — 教学用内存实现 · ch09 Checkpoint 跨进程恢复" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;align=left;spacingLeft=10;fontSize=12;" parent="state-layer" vertex="1">
+          <mxGeometry x="20" y="40" width="580" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-layer" value="外部依赖 (可插拔)" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="60" y="700" width="1280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-llm2" value="LLM Provider&#xa;llm/LLMProvider&#xa;OpenAI · Anthropic · Bedrock" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-layer" vertex="1">
+          <mxGeometry x="20" y="40" width="200" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-tool2" value="Tool Runtime&#xa;executor/Registry&#xa;ToolFunc · 超时 · 并行" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-layer" vertex="1">
+          <mxGeometry x="240" y="40" width="200" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-summ" value="Summarizer (ACL)&#xa;compressor/Summarizer&#xa;隔离 LLM 不确定性" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-layer" vertex="1">
+          <mxGeometry x="460" y="40" width="200" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-store2" value="Storage 后端&#xa;EventStoreDB · Postgres · S3 …" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-layer" vertex="1">
+          <mxGeometry x="680" y="40" width="200" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-pc" value="Provider Adapter&#xa;prompt/OpenAICompiler · AnthropicCompiler" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-layer" vertex="1">
+          <mxGeometry x="900" y="40" width="220" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-mem2" value="Memory 后端&#xa;向量库 · KV · InMemStore" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;align=center;fontSize=11;" parent="ext-layer" vertex="1">
+          <mxGeometry x="1140" y="40" width="120" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-map" value="章节 → 模块映射" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="60" y="850" width="1280" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-m1" value="M1: ch01 domain · ch02 runtime · ch03 state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=center;fontSize=10;" parent="ch-map" vertex="1">
+          <mxGeometry x="20" y="40" width="240" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-m2" value="M2: ch04 context+compressor · ch05 memory · ch06 prompt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=center;fontSize=10;" parent="ch-map" vertex="1">
+          <mxGeometry x="280" y="40" width="280" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-m3" value="M3: ch07 planner · ch08 executor · ch09 checkpoint · examples/m3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=center;fontSize=10;" parent="ch-map" vertex="1">
+          <mxGeometry x="580" y="40" width="300" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-m4" value="M4: ch10 eval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;fontSize=10;" parent="ch-map" vertex="1">
+          <mxGeometry x="900" y="40" width="120" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ch-m5" value="M5: ch11 + ADR-005~009" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;fontSize=10;" parent="ch-map" vertex="1">
+          <mxGeometry x="1040" y="40" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="dep1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673a6;strokeWidth=1;dashed=1;endArrow=open;endFill=0;" parent="1" source="orch" target="pipeline" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;dashed=1;endArrow=open;endFill=0;" parent="1" source="pipeline" target="domain-layer" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d6b656;strokeWidth=2;dashed=1;endArrow=open;endFill=0;" parent="1" source="pipeline" target="state-layer" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;strokeWidth=2;dashed=1;endArrow=open;endFill=0;" parent="1" source="pipeline" target="ext-layer" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="680" />
+              <mxPoint x="700" y="680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dep5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;strokeWidth=1;dashed=1;endArrow=open;endFill=0;" parent="1" source="upper-loop" target="orch" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="4-Turn数据流" id="turn-dataflow">
+    <mxGraphModel dx="1364" dy="848" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title4" value="一次 Turn 的数据流 (ADR-002)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+          <mxGeometry x="400" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle4" value="[]Event → SessionView → Context → Messages → LLMResponse → []Event" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#666666;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="250" y="55" width="900" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="user" value="User Input&#xa;UserSpoke Event" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="40" y="200" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="es4" value="EventStore&#xa;(Append-only)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="120" y="180" width="120" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="st4" value="State&#xa;Fold&#xa;[]Event → SessionView" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;align=center;" parent="1" vertex="1">
+          <mxGeometry x="290" y="190" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ce4" value="ContextEngine&#xa;Project&#xa;SessionView → Context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;align=center;" parent="1" vertex="1">
+          <mxGeometry x="490" y="190" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="pc4" value="PromptCompiler&#xa;Compile&#xa;Context → Messages" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;align=center;" parent="1" vertex="1">
+          <mxGeometry x="700" y="190" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="llm4" value="LLMProvider&#xa;Chat&#xa;Messages → LLMResponse" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=12;align=center;" parent="1" vertex="1">
+          <mxGeometry x="910" y="190" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ex4" value="Executor&#xa;Emit&#xa;LLMResponse → []Event" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=12;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1130" y="190" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tool4" value="Tool Runtime" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1155" y="340" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="f1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="user" target="es4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="es4" target="st4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f2l" value="[]Event" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="f2" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="st4" target="ce4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f3l" value="SessionView" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="f3" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="ce4" target="pc4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f4l" value="Context" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="f4" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="pc4" target="llm4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f5l" value="Messages" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="f5" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="llm4" target="ex4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f6l" value="LLMResponse" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="f6" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;strokeWidth=2;endArrow=block;endFill=1;" parent="1" source="ex4" target="es4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1215" y="120" />
+              <mxPoint x="180" y="120" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f7l" value="[]Event (LLMRequested · LLMReplied · ToolCalled/Returned · TurnEnded)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="f7" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-2" y="-20" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;strokeWidth=1;endArrow=block;endFill=1;dashed=1;" parent="1" source="ex4" target="tool4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f8l" value="ToolCall" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="f8" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;strokeWidth=1;endArrow=block;endFill=1;dashed=1;" parent="1" source="tool4" target="ex4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f9l" value="ToolResult" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;" parent="f9" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673a6;strokeWidth=2;endArrow=block;endFill=1;curved=1;dashed=1;" parent="1" source="es4" target="st4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="320" />
+              <mxPoint x="365" y="320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f10l" value="下一 Turn 再 Fold" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontColor=#9673a6;" parent="f10" vertex="1" connectable="0">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="60" y="430" width="1280" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="协调器规则 &amp; 失败模型" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="80" y="440" width="300" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-pure" value="绿色 = 纯函数 (Fold / Project / Compile)&#xa;同样输入 → 同样输出 · 无外部 IO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;spacingLeft=10;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="80" y="480" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-side" value="橙色 = 副作用 (Chat / Emit)&#xa;网络调用 · 工具执行 · 追加 Event" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;align=left;spacingLeft=10;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="480" y="480" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-rules" value="Runtime.Step 规则:&#xa;· 严格顺序, 不允许并行或调换&#xa;· 每次 Append 后立即 Apply&#xa;· TurnStarted 由调用方追加, TurnEnded 由 Step 追加&#xa;· Chat 失败直接返回, 重试在上层 Loop" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="880" y="480" width="440" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-fail" value="失败策略: Fold 硬失败 · Project 降级 · Compile 终止 Turn · Chat 返回错误 · Emit 单工具失败记 is_error" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="80" y="545" width="1240" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-phil" value="核心哲学: 不承诺原子性, 尽力保证可审计 —— 所有状态变化都落到 Event 流" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="80" y="590" width="1240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="upper-note" value="Upper Loop (Step 外): Compressor.Tick · Planner.Plan · MemoryStore.Query · 生命周期事件" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=center;fontSize=11;dashed=1;" parent="1" vertex="1">
+          <mxGeometry x="290" y="110" width="700" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
